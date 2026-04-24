@@ -940,7 +940,7 @@ def generate_order_draft():
         item_lines.append(f"{qty}x {name} (RM{price:.2f})")
     
     if format_type == 'whatsapp':
-        message = f"Hi {supplier_name}! 🧋\n\nI'd like to order:\n" + "\n".join([f"• {line}" for line in item_lines]) + f"\n\nTotal: RM{total:.2f}\n\nPlease confirm. Thanks! 🙏\n- StockMaster AI"
+        message = f"Hi {supplier_name}!\n\nI'd like to order:\n" + "\n".join([f"- {line}" for line in item_lines]) + f"\n\nTotal: RM{total:.2f}\n\nPlease confirm. Thanks!\n- StockMaster AI"
     elif format_type == 'email':
         message = f"Dear {supplier_name},\n\nI would like to place an order for the following items:\n\n" + "\n".join([f"• {line}" for line in item_lines]) + f"\n\nTotal: RM{total:.2f}\n\nPlease confirm availability and provide an invoice.\n\nBest regards,\nStockMaster AI"
     else:
