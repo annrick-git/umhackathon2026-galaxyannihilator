@@ -330,6 +330,59 @@ TOOL_SCHEMAS = [
                 "required": []
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_optimal_supplier",
+            "description": "Find the best/cheapest supplier for an item by normalizing price to per-unit basis",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "description": "The name of the item to compare suppliers for"}
+                },
+                "required": ["name"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "generate_order_draft",
+            "description": "Generate a WhatsApp or Email order message to send to a supplier",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "supplier": {"type": "string", "description": "The name of the supplier"},
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {"type": "string"},
+                                "quantity": {"type": "number"},
+                                "price_rm": {"type": "number"}
+                            }
+                        },
+                        "description": "Array of items with name, quantity, and price"
+                    },
+                    "format": {"type": "string", "description": "Format type: 'whatsapp' or 'email' (default: whatsapp)"}
+                },
+                "required": ["items"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "export_inventory_csv",
+            "description": "Export inventory data to CSV format for download in Excel",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        }
     }
 ]
 
@@ -358,13 +411,14 @@ def execute_tool(tool_name: str, arguments: dict) -> dict:
         "get_low_stock_items", "get_critical_stock_items", "get_stock_summary",
         "get_suppliers", "get_items_by_supplier", "get_recommended_restock",
         "get_inventory_valuation", "get_category_summary", "export_inventory_report",
-        "health_check"
+        "health_check", "get_optimal_supplier", "export_inventory_csv"
     ]
     
     # Write tools that need JSON body
     write_json_tools = [
         "update_stock", "restock_item", "restock_all_critical",
-        "add_new_item", "search_inventory", "bulk_update_stock"
+        "add_new_item", "search_inventory", "bulk_update_stock",
+        "generate_order_draft"
     ]
     
     try:
@@ -431,6 +485,15 @@ def format_tool_result(tool_name: str, result: dict) -> str:
     elif tool_name == "restock_all_critical":
         return f"Restocked {result.get('items_restocked', 0)} items: {', '.join([r['name'] for r in result.get('data', [])[:5]])}"
     
+    elif tool_name == "get_optimal_supplier":
+        return f"Best supplier for {result.get('item_name')}: {result.get('best_supplier')} at RM{result.get('best_price_rm')}\nNormalized: RM{result.get('normalized_price')}/{result.get('normalized_unit')}\n{result.get('message', '')}"
+    
+    elif tool_name == "generate_order_draft":
+        return f"Order message ready:\n```\n{result.get('message')}\n```\n\nTotal: RM{result.get('total_rm')}"
+    
+    elif tool_name == "export_inventory_csv":
+        return f"CSV export ready: {result.get('total_items')} items. Download from API."
+    
     else:
         # Generic formatting
         return json.dumps(result, indent=2)[:2000]
@@ -458,31 +521,52 @@ def run_agent(prompt: str, max_iterations: int = 10) -> str:
     )
     
     # System message defining the agent's role
-    system_message = """You are an intelligent inventory management assistant for a milk tea shop. 
+    system_message = """You are StockMaster AI, an intelligent inventory management assistant for a milk tea shop in Malaysia.
+
+You understand Malaysian English (Manglish) and local expressions:
+- "Tak ada liao" / "tiada" = item is out of stock / not available
+- "Bawak" / "Bawa" = bring/get
+- "Order" = restock / buy
+- "Sini sini" = here
+- "Mana" = where
+- "Nak" = want
+- "Tak" = don't want / not
+- "Sikit" = a little
+- "Habis" = finished / gone
+- "Kosong" = empty / zero stock
+- "Ready" = available in stock
+- "Selling" = for sale / we have
+- "Beli" = buy
+
 Your job is to help manage inventory, identify items that need restocking, and take actions to keep the shop running smoothly.
 
 You have access to various tools to:
 - Check inventory levels (get_all_inventory, get_low_stock_items, get_critical_stock_items)
 - Get restocking recommendations (get_recommended_restock)
+- Find best supplier by price (get_optimal_supplier)
 - Restock items (restock_item, restock_all_critical)
 - Get supplier information (get_suppliers, get_items_by_supplier)
 - Get inventory statistics (get_stock_summary, get_inventory_valuation)
 - Search and filter inventory (search_inventory, get_category_summary)
 - Add or remove items (add_new_item, remove_item)
 - Update stock levels (update_stock, bulk_update_stock, update_min_stock)
+- Generate order messages for WhatsApp (generate_order_draft)
+- Export to CSV/Excel (export_inventory_csv)
 - Generate reports (export_inventory_report)
 
 When analyzing inventory:
 1. First check the current stock levels using appropriate tools
 2. Identify which items are low or critical
 3. Get recommendations for restocking
-4. Execute restocking actions when needed
-5. Provide a clear summary of what actions were taken
+4. Find optimal supplier using get_optimal_supplier
+5. Execute restocking actions when needed
+6. Provide a clear summary of what actions were taken
+7. Show potential savings from comparing suppliers
 
 Always be helpful, proactive, and provide clear recommendations to the user.
 If you need to take multiple actions, do them one at a time and explain each step.
 When restocking, consider the minimum stock levels and order enough to avoid frequent restocking.
-"""
+Show the savings when you find a better supplier than the current one."""
     
     # Build messages
     messages = [

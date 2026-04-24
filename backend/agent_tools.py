@@ -19,6 +19,85 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 INVENTORY_FILE = os.path.join(BASE_DIR, 'inventory.json')
 
 
+# ============================================
+# Unit Normalization Utilities
+# ============================================
+
+UNIT_CONVERSIONS = {
+    "liter": {"liter": 1.0, "l": 1.0, "ml": 0.001, "gallon": 3.78541, "g": 0.001},
+    "kg": {"kg": 1.0, "g": 0.001, "gram": 0.001, "lb": 0.453592, "oz": 0.0283495},
+    "unit": {"unit": 1.0, "pcs": 1.0, "piece": 1.0, "roll": 1.0, "bag": 1.0, "box": 1.0, "jug": 1.0, "pouch": 1.0, "tub": 1.0, "jar": 1.0, "can": 1.0, "tin": 1.0},
+}
+
+UNIT_TO_BASE = {
+    "liter": ["liter", "l", "ml", "gallon", "g"],
+    "kg": ["kg", "g", "gram", "lb", "oz"],
+    "unit": ["unit", "pcs", "piece", "roll", "bag", "box", "jug", "pouch", "tub", "jar", "can", "tin", "bag", "case", "pack", "carton", "pail"],
+}
+
+
+def normalize_to_base_unit(unit_str: str) -> tuple:
+    """Detect base unit type (liter, kg, unit) and size from unit string"""
+    unit_lower = unit_str.lower()
+    
+    for base, aliases in UNIT_TO_BASE.items():
+        for alias in aliases:
+            if alias in unit_lower:
+                return base, alias
+    return "unit", "unit"
+
+
+def extract_unit_quantity(unit_str: str) -> float:
+    """Extract numeric multiplier from unit string (e.g., 'Case of 1,000' -> 1000)"""
+    import re
+    numbers = re.findall(r'[\d,]+', unit_str)
+    if numbers:
+        return float(numbers[-1].replace(',', ''))
+    return 1.0
+
+
+def normalize_price(price: float, unit_str: str, base_unit: str = "liter") -> dict:
+    """
+    Normalize price to per-liter, per-kg, or per-unit base.
+    
+    Args:
+        price: Price in RM
+        unit_str: Unit description (e.g., "Case (12 x 1 Liter)", "3kg bag")
+        base_unit: Target base unit ("liter", "kg", "unit")
+    
+    Returns:
+        dict with normalized price per base unit
+    """
+    unit_lower = unit_str.lower()
+    base_type, _ = normalize_to_base_unit(unit_str)
+    qty = extract_unit_quantity(unit_str)
+    
+    if base_type == "liter" and base_unit == "liter":
+        if "ml" in unit_lower:
+            normalized = price / (qty * 1000)
+        elif "gallon" in unit_lower:
+            normalized = price / (qty * 3.78541)
+        else:
+            normalized = price / qty
+    elif base_type == "kg" and base_unit == "kg":
+        if "g" in unit_lower and "gallon" not in unit_lower:
+            normalized = price / (qty * 1000)
+        elif "lb" in unit_lower:
+            normalized = price / (qty * 0.453592)
+        else:
+            normalized = price / qty
+    else:
+        normalized = price / qty
+    
+    return {
+        "original_price": price,
+        "original_unit": unit_str,
+        "normalized_price_per_base": round(normalized, 4),
+        "base_unit": base_unit,
+        "quantity_in_unit": qty
+    }
+
+
 def load_inventory():
     """Load inventory data from JSON file"""
     try:
@@ -779,8 +858,144 @@ def health_check():
 
 
 # ============================================
-# Error Handlers
+# TOOL 23: Get Optimal Supplier
 # ============================================
+@app.route('/api/tools/get_optimal_supplier', methods=['GET'])
+def get_optimal_supplier():
+    """Find the best supplier for an item based on normalized price per unit"""
+    item_name = request.args.get('name')
+    if not item_name:
+        return jsonify({"success": False, "error": "Missing 'name' parameter"}), 400
+    
+    data = load_inventory()
+    item_lower = item_name.lower()
+    
+    supplier_options = []
+    for supplier in data['suppliers']:
+        for sup_item in supplier.get('items', []):
+            if item_lower in sup_item['name'].lower():
+                norm = normalize_price(sup_item.get('priceRM', 0), sup_item.get('unit', 'unit'))
+                supplier_options.append({
+                    "supplier_name": supplier['name'],
+                    "item_name": sup_item['name'],
+                    "unit": sup_item.get('unit'),
+                    "price_rm": sup_item.get('priceRM'),
+                    "normalized_price_per_unit": norm['normalized_price_per_base'],
+                    "base_unit": norm['base_unit'],
+                    "package_size": norm['quantity_in_unit']
+                })
+    
+    if not supplier_options:
+        return jsonify({"success": False, "error": f"No suppliers found for '{item_name}'"}), 404
+    
+    supplier_options.sort(key=lambda x: x['normalized_price_per_unit'])
+    best = supplier_options[0]
+    savings = None
+    
+    if len(supplier_options) > 1:
+        worst = supplier_options[-1]
+        savings = round(worst['normalized_price_per_unit'] - best['normalized_price_per_unit'], 2)
+        savings_percentage = round((savings / worst['normalized_price_per_unit']) * 100, 1)
+    
+    return jsonify({
+        "success": True,
+        "tool": "get_optimal_supplier",
+        "item_name": item_name,
+        "best_supplier": best['supplier_name'],
+        "best_price_rm": best['price_rm'],
+        "best_unit": best['unit'],
+        "normalized_price": best['normalized_price_per_unit'],
+        "normalized_unit": best['base_unit'],
+        "all_options_count": len(supplier_options),
+        "all_options": supplier_options,
+        "potential_savings_rm": savings,
+        "message": f"Best: {best['supplier_name']} at RM{best['price_rm']} ({best['unit']})" + 
+                   (f" | Save RM{savings} vs others!" if savings else "")
+    })
+
+
+# ============================================
+# TOOL 24: Generate Order Draft
+# ============================================
+@app.route('/api/tools/generate_order_draft', methods=['POST'])
+def generate_order_draft():
+    """Generate a WhatsApp/Email order message for suppliers"""
+    data = request.get_json()
+    
+    if not data or 'items' not in data:
+        return jsonify({"success": False, "error": "Missing 'items' array"}), 400
+    
+    supplier_name = data.get('supplier', '')
+    items = data['items']
+    format_type = data.get('format', 'whatsapp').lower()
+    
+    total = 0
+    item_lines = []
+    for item in items:
+        name = item.get('name', item.get('item_name', 'Unknown'))
+        qty = item.get('quantity', 1)
+        price = item.get('price_rm', item.get('priceRM', 0))
+        subtotal = qty * price
+        total += subtotal
+        item_lines.append(f"{qty}x {name} (RM{price:.2f})")
+    
+    if format_type == 'whatsapp':
+        message = f"Hi {supplier_name}! 🧋\n\nI'd like to order:\n" + "\n".join([f"• {line}" for line in item_lines]) + f"\n\nTotal: RM{total:.2f}\n\nPlease confirm. Thanks! 🙏\n- StockMaster AI"
+    elif format_type == 'email':
+        message = f"Dear {supplier_name},\n\nI would like to place an order for the following items:\n\n" + "\n".join([f"• {line}" for line in item_lines]) + f"\n\nTotal: RM{total:.2f}\n\nPlease confirm availability and provide an invoice.\n\nBest regards,\nStockMaster AI"
+    else:
+        message = "Order Summary:\n" + "\n".join(item_lines) + f"\n\nTotal: RM{total:.2f}"
+    
+    return jsonify({
+        "success": True,
+        "tool": "generate_order_draft",
+        "supplier": supplier_name,
+        "format": format_type,
+        "item_count": len(items),
+        "total_rm": round(total, 2),
+        "message": message,
+        "message_preview": message[:100] + "..." if len(message) > 100 else message
+    })
+
+
+# ============================================
+# TOOL 25: Export to CSV
+# ============================================
+@app.route('/api/tools/export_inventory_csv', methods=['GET'])
+def export_inventory_csv():
+    """Export inventory to CSV format for Excel"""
+    import csv
+    import io
+    
+    data = load_inventory()
+    items = data['items']
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['ID', 'Name', 'Category', 'Current Stock', 'Min Stock', 'Unit', 'Status'])
+    
+    for item in items:
+        status = 'OK' if item['currentStock'] >= item['minStock'] else 'LOW' if item['currentStock'] > 0 else 'OUT'
+        writer.writerow([
+            item.get('id', ''),
+            item.get('name', ''),
+            item.get('category', ''),
+            item.get('currentStock', 0),
+            item.get('minStock', 0),
+            item.get('unit', ''),
+            status
+        ])
+    
+    csv_content = output.getvalue()
+    
+    return jsonify({
+        "success": True,
+        "tool": "export_inventory_csv",
+        "filename": "inventory_export.csv",
+        "total_items": len(items),
+        "csv_content": csv_content,
+        "download_ready": True
+    })
 @app.errorhandler(404)
 def not_found(e):
     return jsonify({"success": False, "error": "Endpoint not found"}), 404
@@ -796,7 +1011,7 @@ if __name__ == '__main__':
     print("Agentic AI Inventory Tools - REST API")
     print("=" * 60)
     print("Running on http://localhost:5001")
-    print("\nAvailable Tools (22 endpoints):")
+    print("\nAvailable Tools (25 endpoints):")
     print("  1. GET  /api/tools/get_all_inventory")
     print("  2. GET  /api/tools/get_item_by_id?id=...")
     print("  3. GET  /api/tools/get_item_by_name?name=...")
@@ -819,5 +1034,8 @@ if __name__ == '__main__':
     print(" 20. POST /api/tools/bulk_update_stock")
     print(" 21. GET  /api/tools/export_inventory_report")
     print(" 22. GET  /api/tools/health_check")
+    print(" 23. GET  /api/tools/get_optimal_supplier?name=...")
+    print(" 24. POST /api/tools/generate_order_draft")
+    print(" 25. GET  /api/tools/export_inventory_csv")
     print("=" * 60)
     app.run(host='0.0.0.0', port=5001, debug=True)
