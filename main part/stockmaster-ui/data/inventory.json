@@ -1,0 +1,29 @@
+{
+  "items": [
+    { "id": "1", "name": "Fresh Whole Milk", "category": "Dairy", "currentStock": 0, "minStock": 5, "unit": "Case" },
+    { "id": "2", "name": "Tapioca Pearls (Boba)", "category": "Boba", "currentStock": 2, "minStock": 3, "unit": "3kg bag" },
+    { "id": "3", "name": "16oz PET Plastic Cups", "category": "Packaging", "currentStock": 8, "minStock": 10, "unit": "Case of 1,000" },
+    { "id": "4", "name": "2-Ply Toilet Paper", "category": "Janitorial", "currentStock": 12, "minStock": 5, "unit": "Case of 96 rolls" },
+    { "id": "5", "name": "Pre-prepared Croissant Dough", "category": "Bakery", "currentStock": 3, "minStock": 2, "unit": "Box of 100 units" },
+    { "id": "6", "name": "Jasmine Green Tea Leaves", "category": "Tea", "currentStock": 4, "minStock": 3, "unit": "1 kg bag" },
+    { "id": "7", "name": "Assam Black Tea Leaves", "category": "Tea", "currentStock": 1, "minStock": 3, "unit": "1 kg bag" },
+    { "id": "8", "name": "Brown Sugar Syrup", "category": "Sweeteners", "currentStock": 5, "minStock": 4, "unit": "2.5 kg jug" },
+    { "id": "9", "name": "Liquid Fructose Sweetener", "category": "Sweeteners", "currentStock": 2, "minStock": 2, "unit": "5 Gallon Pail" },
+    { "id": "10", "name": "Non-Dairy Creamer", "category": "Dairy", "currentStock": 3, "minStock": 4, "unit": "50 lb sack" },
+    { "id": "11", "name": "Barista Blend Oat Milk", "category": "Dairy", "currentStock": 6, "minStock": 4, "unit": "Case (12 x 1 Liter)" },
+    { "id": "12", "name": "Culinary Grade Matcha Powder", "category": "Tea", "currentStock": 2, "minStock": 2, "unit": "500g pouch" },
+    { "id": "13", "name": "Individually Wrapped Wide Straws", "category": "Packaging", "currentStock": 4, "minStock": 5, "unit": "Box of 4,000" },
+    { "id": "14", "name": "Cup Sealing Film (Clear)", "category": "Packaging", "currentStock": 3, "minStock": 3, "unit": "Roll (approx. 3,000 seals)" },
+    { "id": "15", "name": "Nata de Coco (Coconut Jelly)", "category": "Toppings", "currentStock": 4, "minStock": 3, "unit": "3.8 kg jar" },
+    { "id": "16", "name": "Lychee Popping Boba", "category": "Toppings", "currentStock": 1, "minStock": 2, "unit": "3.2 kg tub" },
+    { "id": "17", "name": "Commercial Food-Grade Sanitizer", "category": "Janitorial", "currentStock": 3, "minStock": 2, "unit": "1 Gallon jug" },
+    { "id": "18", "name": "Dispenser Paper Napkins", "category": "Janitorial", "currentStock": 7, "minStock": 5, "unit": "Case of 6,000" },
+    { "id": "19", "name": "Heavy Duty Trash Bags (55 Gal)", "category": "Janitorial", "currentStock": 5, "minStock": 3, "unit": "Box of 100" },
+    { "id": "20", "name": "Commercial Water Filter Cartridge", "category": "Equipment", "currentStock": 1, "minStock": 1, "unit": "1 Unit" },
+    { "id": "21", "name": "Premium Taro Root Powder", "category": "Toppings", "currentStock": 3, "minStock": 2, "unit": "1 kg bag" },
+    { "id": "22", "name": "Evaporated Milk", "category": "Dairy", "currentStock": 4, "minStock": 3, "unit": "Carton (48 x 400g tins)" },
+    { "id": "23", "name": "Single Cup Plastic Carrier Bags", "category": "Packaging", "currentStock": 10, "minStock": 8, "unit": "Pack of 500" },
+    { "id": "24", "name": "Mango Fruit Puree", "category": "Toppings", "currentStock": 2, "minStock": 3, "unit": "2 kg bottle" },
+    { "id": "25", "name": "Thermal Receipt Paper (80x80mm)", "category": "Supplies", "currentStock": 5, "minStock": 3, "unit": "Box of 50 rolls" }
+  ]
+}

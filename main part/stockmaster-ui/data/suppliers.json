@@ -1,0 +1,104 @@
+{
+  "suppliers": [
+    {
+      "name": "Dairy Farms Inc.",
+      "items": [
+        { "name": "Fresh Whole Milk", "unit": "Case (4 x 1 Gallon)", "priceRM": 73.12 },
+        { "name": "Evaporated Milk", "unit": "Carton (48 x 400g tins)", "priceRM": 145.00 }
+      ]
+    },
+    {
+      "name": "Boba King Wholesale",
+      "items": [
+        { "name": "Tapioca Pearls (Boba)", "unit": "3 kg bag", "priceRM": 47.43 },
+        { "name": "Lychee Popping Boba", "unit": "3.2 kg tub", "priceRM": 86.96 }
+      ]
+    },
+    {
+      "name": "Pack-It Right",
+      "items": [
+        { "name": "16oz PET Plastic Cups", "unit": "Case of 1,000", "priceRM": 256.91 },
+        { "name": "Individually Wrapped Wide Straws", "unit": "Box of 4,000", "priceRM": 166.01 },
+        { "name": "Cup Sealing Film (Clear)", "unit": "Roll (approx. 3,000 seals)", "priceRM": 110.67 },
+        { "name": "Single Cup Plastic Carrier Bags", "unit": "Pack of 500", "priceRM": 18.00 }
+      ]
+    },
+    {
+      "name": "Janitorial Supply Co.",
+      "items": [
+        { "name": "2-Ply Toilet Paper", "unit": "Case of 96 rolls", "priceRM": 177.86 },
+        { "name": "Dispenser Paper Napkins", "unit": "Case of 6,000", "priceRM": 150.20 }
+      ]
+    },
+    {
+      "name": "Bake-Ready Goods",
+      "items": [
+        { "name": "Pre-prepared Croissant Dough", "unit": "Box of 100 units", "priceRM": 335.96 }
+      ]
+    },
+    {
+      "name": "Serene Tea Imports",
+      "items": [
+        { "name": "Jasmine Green Tea Leaves", "unit": "1 kg bag", "priceRM": 94.86 },
+        { "name": "Assam Black Tea Leaves", "unit": "1 kg bag", "priceRM": 83.00 }
+      ]
+    },
+    {
+      "name": "Sweet Source Syrups",
+      "items": [
+        { "name": "Brown Sugar Syrup", "unit": "2.5 kg jug", "priceRM": 61.26 },
+        { "name": "Liquid Fructose Sweetener", "unit": "5 Gallon Pail", "priceRM": 158.10 },
+        { "name": "Mango Fruit Puree", "unit": "2 kg bottle", "priceRM": 42.50 }
+      ]
+    },
+    {
+      "name": "Creamy Blends Ltd.",
+      "items": [
+        { "name": "Non-Dairy Creamer", "unit": "50 lb sack", "priceRM": 217.39 }
+      ]
+    },
+    {
+      "name": "Alternative Dairy Co.",
+      "items": [
+        { "name": "Barista Blend Oat Milk", "unit": "Case (12 x 1 Liter)", "priceRM": 142.29 }
+      ]
+    },
+    {
+      "name": "Zen Matcha Wholesalers",
+      "items": [
+        { "name": "Culinary Grade Matcha Powder", "unit": "500g pouch", "priceRM": 118.58 }
+      ]
+    },
+    {
+      "name": "Tropical Toppings",
+      "items": [
+        { "name": "Nata de Coco (Coconut Jelly)", "unit": "3.8 kg jar", "priceRM": 75.10 }
+      ]
+    },
+    {
+      "name": "CleanServe Solutions",
+      "items": [
+        { "name": "Commercial Food-Grade Sanitizer", "unit": "1 Gallon jug", "priceRM": 55.34 },
+        { "name": "Heavy Duty Trash Bags (55 Gal)", "unit": "Box of 100", "priceRM": 102.77 }
+      ]
+    },
+    {
+      "name": "ClearFlow Tech",
+      "items": [
+        { "name": "Commercial Water Filter Cartridge", "unit": "1 Unit", "priceRM": 335.96 }
+      ]
+    },
+    {
+      "name": "Purple Yam Co.",
+      "items": [
+        { "name": "Premium Taro Root Powder", "unit": "1 kg bag", "priceRM": 35.00 }
+      ]
+    },
+    {
+      "name": "Office Supplies Direct",
+      "items": [
+        { "name": "Thermal Receipt Paper (80x80mm)", "unit": "Box of 50 rolls", "priceRM": 85.00 }
+      ]
+    }
+  ]
+}
