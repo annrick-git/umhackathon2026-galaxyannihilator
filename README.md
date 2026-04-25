@@ -1,6 +1,8 @@
 # 🧋 StockMaster AI
 ### *The Autonomous Procurement Agent for Malaysia's Milk Tea Scene*
 
+[**🎥 Watch the Demo Video**](https://drive.google.com/file/d/1FN5u_iEApc_oivPNIpynPyftf53pYV0c/view?usp=sharing)
+
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org/)
 [![Zhipu AI](https://img.shields.io/badge/Powered%20By-Z.ai%20(GLM)-blue)](https://open.bigmodel.cn/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
