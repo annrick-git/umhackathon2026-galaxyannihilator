@@ -4,7 +4,7 @@
       "id": "1",
       "name": "Fresh Whole Milk",
       "category": "Dairy",
-      "currentStock": 15,
+      "currentStock": 4,
       "minStock": 5,
       "unit": "Case"
     },
@@ -12,7 +12,7 @@
       "id": "2",
       "name": "Tapioca Pearls (Boba)",
       "category": "Boba",
-      "currentStock": 13,
+      "currentStock": 0,
       "minStock": 3,
       "unit": "3kg bag"
     },
@@ -20,7 +20,7 @@
       "id": "3",
       "name": "16oz PET Plastic Cups",
       "category": "Packaging",
-      "currentStock": 11,
+      "currentStock": 20,
       "minStock": 10,
       "unit": "Case of 1,000"
     },
@@ -60,7 +60,7 @@
       "id": "8",
       "name": "Brown Sugar Syrup",
       "category": "Sweeteners",
-      "currentStock": 13,
+      "currentStock": 0,
       "minStock": 4,
       "unit": "2.5 kg jug"
     },
@@ -140,7 +140,7 @@
       "id": "18",
       "name": "Dispenser Paper Napkins",
       "category": "Janitorial",
-      "currentStock": 7,
+      "currentStock": 0,
       "minStock": 5,
       "unit": "Case of 6,000"
     },
@@ -156,7 +156,7 @@
       "id": "20",
       "name": "Commercial Water Filter Cartridge",
       "category": "Equipment",
-      "currentStock": 1,
+      "currentStock": 0,
       "minStock": 1,
       "unit": "1 Unit"
     },
@@ -180,7 +180,7 @@
       "id": "23",
       "name": "Single Cup Plastic Carrier Bags",
       "category": "Packaging",
-      "currentStock": 10,
+      "currentStock": 0,
       "minStock": 8,
       "unit": "Pack of 500"
     },
