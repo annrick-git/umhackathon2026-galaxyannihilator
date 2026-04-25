@@ -103,10 +103,10 @@ export default function StockMasterDashboard() {
   }
 
   const translations: Record<string, Record<string, string>> = {
-    en: { dashboard: 'Dashboard', inventory: 'Inventory', suppliers: 'Suppliers', settings: 'Settings', prices: 'Prices', lowStockAlerts: 'Low Stock Alerts', allStocked: 'All items stocked!', left: 'left', settingsTitle: 'Settings', theme: 'Theme', fontSize: 'Font Size', currency: 'Currency', language: 'Language', systemHealth: 'System Health', criticalItems: 'Critical Items', estValue: 'Est. Value' },
-    ms: { dashboard: 'Papan Pemuka', inventory: 'Inventori', suppliers: 'Pembekal', settings: 'Tetapan', prices: 'Harga', lowStockAlerts: 'Amaran Stok Rendah', allStocked: 'Semua item mencukupi!', left: 'baki', settingsTitle: 'Tetapan', theme: 'Tema', fontSize: 'Saiz Fon', currency: 'Mata Wang', language: 'Bahasa', systemHealth: 'Kesihatan Sistem', criticalItems: 'Item Kritikal', estValue: 'Anggaran Nilai' },
-    zh: { dashboard: '仪表板', inventory: '库存', suppliers: '供应商', settings: '设置', prices: '价格', lowStockAlerts: '低库存警报', allStocked: '所有物品库存充足！', left: '剩余', settingsTitle: '设置', theme: '主题', fontSize: '字体大小', currency: '货币', language: '语言', systemHealth: '系统健康度', criticalItems: '关键项目', estValue: '预计价值' },
-    ta: { dashboard: 'டாஷ்போர்டு', inventory: 'இன்வெண்டரி', suppliers: 'வழங்குநர்கள்', settings: 'அமைப்புகள்', prices: 'விலைகள்', lowStockAlerts: 'குறைந்த இருப்பு எச்சரிக்கைகள்', allStocked: 'அனைத்து பொருட்களும் இருப்பில் உள்ளன!', left: 'மீதம்', settingsTitle: 'அமைப்புகள்', theme: 'தீம்', fontSize: 'எழுத்துரு அளவு', currency: 'நாணயம்', language: 'மொழி', systemHealth: 'கணினி ஆரோக்கியம்', criticalItems: 'முக்கிய பொருட்கள்', estValue: 'மதிப்பிடப்பட்ட மதிப்பு' }
+    en: { dashboard: 'Dashboard', inventory: 'Inventory', suppliers: 'Suppliers', settings: 'Settings', prices: 'Prices', lowStockAlerts: 'Low Stock Alerts', allStocked: 'All items stocked!', left: 'left', settingsTitle: 'Settings', theme: 'Theme', fontSize: 'Font Size', currency: 'Currency', language: 'Language', systemHealth: 'System Health', criticalItems: 'Critical Items', estValue: 'Est. Value', logout: 'Logout' },
+    ms: { dashboard: 'Papan Pemuka', inventory: 'Inventori', suppliers: 'Pembekal', settings: 'Tetapan', prices: 'Harga', lowStockAlerts: 'Amaran Stok Rendah', allStocked: 'Semua item mencukupi!', left: 'baki', settingsTitle: 'Tetapan', theme: 'Tema', fontSize: 'Saiz Fon', currency: 'Mata Wang', language: 'Bahasa', systemHealth: 'Kesihatan Sistem', criticalItems: 'Item Kritikal', estValue: 'Anggaran Nilai', logout: 'Log Keluar' },
+    zh: { dashboard: '仪表板', inventory: '库存', suppliers: '供应商', settings: '设置', prices: '价格', lowStockAlerts: '低库存警报', allStocked: '所有物品库存充足！', left: '剩余', settingsTitle: '设置', theme: '主题', fontSize: '字体大小', currency: '货币', language: '语言', systemHealth: '系统健康度', criticalItems: '关键项目', estValue: '预计价值', logout: '登出' },
+    ta: { dashboard: 'டாஷ்போர்டு', inventory: 'இன்வெண்டரி', suppliers: 'வழங்குநர்கள்', settings: 'அமைப்புகள்', prices: 'விலைகள்', lowStockAlerts: 'குறைந்த இருப்பு எச்சரிக்கைகள்', allStocked: 'அனைத்து பொருட்களும் இருப்பில் உள்ளன!', left: 'மீதம்', settingsTitle: 'அமைப்புகள்', theme: 'தீம்', fontSize: 'எழுத்துரு அளவு', currency: 'நாணயம்', language: 'மொழி', systemHealth: 'கணினி ஆரோக்கியம்', criticalItems: 'முக்கிய பொருட்கள்', estValue: 'மதிப்பிடப்பட்ட மதிப்பு', logout: 'வெளியேறு' }
   };
 
   const t = translations[language] || translations.en;
@@ -548,6 +548,22 @@ export default function StockMasterDashboard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                 </svg>
                 {t.prices}
+              </button>
+            </li>
+            <li className="mt-4 pt-4 border-t border-border">
+              <button 
+                onClick={() => {
+                  setShowLogin(true)
+                  setUserName("")
+                  setActiveView("dashboard")
+                  setLoginForm({ username: "", password: "" })
+                }} 
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-destructive hover:bg-destructive/10 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                {t.logout}
               </button>
             </li>
           </ul>
