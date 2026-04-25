@@ -12,10 +12,31 @@ interface StockSummary {
   stock_health_percentage: number
 }
 
-export function QuickStats() {
+interface QuickStatsProps {
+  currency: string
+  t: Record<string, string>
+}
+
+export function QuickStats({ currency, t }: QuickStatsProps) {
   const [stats, setStats] = useState<StockSummary | null>(null)
   const [value, setValue] = useState<number>(0)
   const [isLoading, setIsLoading] = useState(true)
+
+  const currencyConfigs: Record<string, { symbol: string; locale: string; rate: number }> = {
+    MYR: { symbol: 'RM', locale: 'ms-MY', rate: 1 },
+    USD: { symbol: '$', locale: 'en-US', rate: 0.22 },
+    EUR: { symbol: '€', locale: 'de-DE', rate: 0.20 },
+    GBP: { symbol: '£', locale: 'en-GB', rate: 0.17 },
+    INR: { symbol: '₹', locale: 'en-IN', rate: 18.5 },
+    CNY: { symbol: '¥', locale: 'zh-CN', rate: 1.6 },
+    JPY: { symbol: '¥', locale: 'ja-JP', rate: 33 }
+  };
+
+  function formatCurrency(amount: number, curr: string) {
+    const config = currencyConfigs[curr] || currencyConfigs.MYR;
+    const converted = amount * config.rate;
+    return new Intl.NumberFormat(config.locale, { style: 'currency', currency: curr }).format(converted);
+  }
 
   useEffect(() => {
     let mounted = true
@@ -86,7 +107,7 @@ export function QuickStats() {
             <Package className="w-6 h-6 text-green-500" />
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">System Health</p>
+            <p className="text-sm text-muted-foreground">{t.systemHealth}</p>
             <h3 className="text-2xl font-bold text-foreground">{displayStats.stock_health_percentage}%</h3>
           </div>
         </div>
@@ -96,7 +117,7 @@ export function QuickStats() {
             <AlertTriangle className="w-6 h-6 text-amber-500" />
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">Critical Items</p>
+            <p className="text-sm text-muted-foreground">{t.criticalItems}</p>
             <h3 className="text-2xl font-bold text-foreground">{displayStats.low_stock_items + displayStats.out_of_stock_items}</h3>
           </div>
         </div>
@@ -106,8 +127,8 @@ export function QuickStats() {
             <DollarSign className="w-6 h-6 text-blue-500" />
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">Est. Value</p>
-            <h3 className="text-2xl font-bold text-foreground">RM {value.toFixed(2)}</h3>
+            <p className="text-sm text-muted-foreground">{t.estValue}</p>
+            <h3 className="text-2xl font-bold text-foreground">{formatCurrency(value, currency)}</h3>
           </div>
         </div>
       </div>
