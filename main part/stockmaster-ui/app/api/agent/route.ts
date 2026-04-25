@@ -112,23 +112,89 @@ async function executeTool(toolName: string, args: Record<string, unknown> = {})
 }
 
 function formatToolResult(toolName: string, result: Record<string, unknown>) {
-  if (!result.success && !result.data) return `Error: ${result.error || "Unknown error"}`
+  if (!result.success && !result.data) return `Sorry, I got an error: ${result.error || "Unknown error"}`
   
   if (toolName === "get_optimal_supplier") {
-    return `Best supplier: ${result.best_supplier} at RM${result.best_price_rm}\nNormalized: RM${result.normalized_price}/${result.normalized_unit}\nOptions: ${result.all_options_count}\nSavings: RM${result.potential_savings}`
+    const best = result.best_supplier
+    const price = result.best_price_rm
+    const unit = result.best_unit
+    const normPrice = result.normalized_price
+    const normUnit = result.normalized_unit
+    const savings = result.potential_savings
+    const options = result.all_options_count
+    
+    let response = `I've checked all ${options} suppliers for you!\n\n`
+    response += `🏆 **Best Price: ${best}**\n`
+    response += `   RM${price} (${unit})\n`
+    response += `   = RM${normPrice}/${normUnit}\n`
+    
+    if (savings && savings > 0) {
+      response += `\n💰 **You save RM${savings}** by choosing ${best}!`
+    }
+    
+    return response
   }
+  
   if (toolName === "get_low_stock_items") {
     const items = result.data || []
-    if (items.length === 0) return "All items are stocked!"
-    return `Low stock (${items.length}):\n${items.slice(0, 5).map((i: Record<string, unknown>) => `- ${i.name}: ${i.currentStock}/${i.minStock}`).join("\n")}`
+    if (items.length === 0) return "Great news boss! All items are well stocked! ✨"
+    
+    let response = `⚠️ **${items.length} items need restocking:**\n\n`
+    items.slice(0, 5).forEach((i: Record<string, unknown>) => {
+      const status = i.currentStock === 0 ? "OUT OF STOCK!" : "low"
+      response += `• **${i.name}**: ${i.currentStock}/${i.minStock} ${i.unit} (${status})\n`
+    })
+    if (items.length > 5) {
+      response += `\n...and ${items.length - 5} more items`
+    }
+    return response
   }
+  
   if (toolName === "get_stock_summary") {
     const d = result.data || {}
-    return `Stock Summary:\n- Items: ${d.total_unique_items}\n- Low Stock: ${d.low_stock_items}\n- Out of Stock: ${d.out_of_stock_items}\n- Health: ${d.stock_health_percentage}%`
+    const health = d.stock_health_percentage
+    const total = d.total_unique_items
+    const low = d.low_stock_items
+    const out = d.out_of_stock_items
+    
+    let response = `📊 **Inventory Summary**\n\n`
+    response += `✅ System Health: **${health}%**\n`
+    response += `📦 Total Items: ${total}\n`
+    response += `⚠️ Low Stock: ${low}\n`
+    response += `🔴 Out of Stock: ${out}`
+    
+    return response
   }
+  
+  if (toolName === "get_recommended_restock") {
+    const items = result.data || []
+    if (items.length === 0) return "Everything looks good boss! No restocking needed."
+    
+    let response = `📋 **Recommended Restock:**\n\n`
+    items.slice(0, 5).forEach((i: Record<string, unknown>) => {
+      response += `• **${i.name}**: Order ${i.recommended_order_quantity} ${i.unit}\n`
+      response += `   Priority: ${i.priority} | Est. RM${i.estimated_cost_rm}\n`
+    })
+    
+    const totalCost = result.total_estimated_cost_rm
+    response += `\n💵 **Total Estimated: RM${totalCost}**`
+    
+    return response
+  }
+  
+  if (toolName === "restock_item") {
+    const item = result.data || {}
+    const newStock = result.new_stock
+    const added = result.added_quantity
+    return `✅ **Done!** Added ${added} to ${item.name}. New stock: ${newStock} ${item.unit}`
+  }
+  
   if (toolName === "generate_order_draft") {
-    return `Order Message:\n${result.message}\n\nTotal: RM${result.total_rm}`
+    const msg = result.message
+    const total = result.total_rm
+    return `📱 **WhatsApp Order Message:**\n\n_${msg}_\n\n💰 **Total: RM${total}**\n\nCopy and send to supplier!`
   }
+  
   return JSON.stringify(result, null, 2).slice(0, 500)
 }
 
@@ -142,24 +208,37 @@ export async function POST(req: NextRequest) {
       baseURL: ZAI_BASE_URL,
     })
 
-    const systemPrompt = `You are StockMaster AI, an intelligent inventory agent. 
+    const systemPrompt = `You are StockMaster AI, a friendly inventory assistant for a milk tea shop.
 
-IMPORTANT - You have access to tools:
-- get_all_inventory: Get all items
-- get_low_stock_items: Get items below minimum stock
-- get_stock_summary: Get statistics  
-- get_optimal_supplier: Compare suppliers, find cheapest (always use this!)
-- restock_item: Add stock to an item (id + quantity)
-- get_recommended_restock: Get AI recommendations
+Your personality: Helpful, casual, like talking to a friend. You use simple language.
 
-INSTRUCTIONS:
-1. First get inventory data to check current stock
-2. Use get_optimal_supplier to find best price
-3. Compare suppliers and show savings
-4. Use Manglish: "tak ada liao" = out of stock, "nak order" = want to order
+IMPORTANT TOOLS:
+- get_all_inventory: Check all items (no args)
+- get_low_stock_items: See what's low/out (no args)
+- get_stock_summary: Overall stats (no args)
+- get_optimal_supplier: Find cheapest supplier (needs item name)
+- restock_item: Add stock (needs id + quantity)
+- get_recommended_restock: AI suggestions (no args)
 
-When user asks about stock, use tools. When comparing prices, use get_optimal_supplier.
-Show savings when you find a better deal!`
+HOW TO TALK:
+1. Use friendly, casual language
+2. Always format nicely with emojis and bold text
+3. Show savings when comparing suppliers
+4. Keep responses short and clear
+5. Use Markdown for bold (**text**) and bullets (•)
+
+EXAMPLES:
+- "Sure boss, let me check..." 
+- "Found it! Best price is from [Supplier] at RMxxx"
+- "You can save RMxxx by choosing this supplier!"
+- "Already added more stock for you!"
+
+When user asks about inventory:
+1. Use the right tool
+2. Format the result nicely with emojis
+3. Add helpful suggestions
+
+Start your response by acknowledging what the user wants, then give the answer.`
 
     const messages = [
       { role: "system" as const, content: systemPrompt },
@@ -184,7 +263,7 @@ Show savings when you find a better deal!`
       const toolName = toolCall.function.name
       const args = JSON.parse(toolCall.function.arguments)
 
-      console.log(`[Tool] ${toolName}`, args)
+      console.log(`[Calling] ${toolName}:`, args)
 
       const toolResult = await executeTool(toolName, args)
       const formatted = formatToolResult(toolName, toolResult)
@@ -194,14 +273,16 @@ Show savings when you find a better deal!`
         messages: [
           ...messages as never,
           { role: "assistant" as const, content: null, tool_calls: [toolCall] as never },
-          { role: "tool" as const, tool_call_id: toolCall.id, content: formatted } as never },
+          { role: "tool" as const, tool_call_id: toolCall.id, content: formatted } as never
         ] as never,
       })
 
       return NextResponse.json({ response: followUp.choices[0]?.message?.content || formatted })
     }
 
-    return NextResponse.json({ response: response?.content || "I didn't understand that." })
+    const textResponse = response?.content || ""
+    
+    return NextResponse.json({ response: textResponse })
   } catch (error) {
     console.error("Agent API error:", error)
     return NextResponse.json(

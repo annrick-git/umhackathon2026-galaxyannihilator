@@ -5,7 +5,7 @@ import { ChatMessage } from "@/components/chat/ChatMessage"
 import { TypingIndicator } from "@/components/chat/TypingIndicator"
 import { ImageUpload } from "@/components/chat/ImageUpload"
 import { VoiceInput } from "@/components/chat/VoiceInput"
-import { QuickStats } from "@/components/chat/QuickStats"
+import { QuickStats } from "@/components/dashboard/QuickStats"
 
 interface Message {
   role: "user" | "assistant"
@@ -246,7 +246,7 @@ export default function StockMasterDashboard() {
             </div>
           ) : (
             <>
-              <QuickStats items={allInventory} />
+              <QuickStats />
               {messages.map((message, index) => (
                 <ChatMessage 
                   key={index} 
@@ -263,7 +263,7 @@ export default function StockMasterDashboard() {
         <div className="p-4 border-t border-border bg-card">
           <div className="max-w-3xl mx-auto">
             <form onSubmit={handleSubmit} className="flex items-center gap-3 bg-muted/50 rounded-xl p-2">
-              <VoiceInput onTranscribe={(text) => setInputValue(prev => prev + " " + text)} disabled={isLoading} />
+              <VoiceInput onTranscript={(text) => setInputValue(prev => prev ? prev + " " + text : text)} disabled={isLoading} />
               <ImageUpload onUpload={handleImageUpload} disabled={isLoading} />
               <input
                 type="text"
