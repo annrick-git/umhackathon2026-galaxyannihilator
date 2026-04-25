@@ -257,13 +257,14 @@ Start your response by acknowledging what the user wants, then give the answer.`
     })
 
     const response = completion.choices[0]?.message
+    console.log("Z AI response:", response)
 
     if (response?.tool_calls) {
       const toolCall = response.tool_calls[0]
       const toolName = toolCall.function.name
       const args = JSON.parse(toolCall.function.arguments)
 
-      console.log(`[Calling] ${toolName}:`, args)
+      console.log(`[Tool] ${toolName}:`, args)
 
       const toolResult = await executeTool(toolName, args)
       const formatted = formatToolResult(toolName, toolResult)
@@ -282,7 +283,34 @@ Start your response by acknowledging what the user wants, then give the answer.`
 
     const textResponse = response?.content || ""
     
-    return NextResponse.json({ response: textResponse })
+    // FALLBACK: If no tool call, check keywords and call API directly
+    const lower = message.toLowerCase()
+    
+    if (lower.includes("low stock") || lower.includes("need restock") || lower.includes("susu") || lower.includes("tak ada")) {
+      const result = await executeTool("get_low_stock_items", {})
+      return NextResponse.json({ response: formatToolResult("get_low_stock_items", result) })
+    }
+    
+    if (lower.includes("supplier") || lower.includes("cheapest") || lower.includes("price") || lower.includes("cheap")) {
+      // Try to extract item name
+      const itemMatch = message.match(/(?:for|to|get)\s+([A-Za-z\s]+?)(?:\?|$)/i) || message.match(/([A-Za-z]+(?:\s+[A-Za-z]+)?)/)
+      const itemName = itemMatch ? itemMatch[1].trim() : "Fresh Whole Milk"
+      console.log("Looking for supplier:", itemName)
+      const result = await executeTool("get_optimal_supplier", { name: itemName })
+      return NextResponse.json({ response: formatToolResult("get_optimal_supplier", result) })
+    }
+    
+    if (lower.includes("summary") || lower.includes("stats") || lower.includes("health") || lower.includes("report")) {
+      const result = await executeTool("get_stock_summary", {})
+      return NextResponse.json({ response: formatToolResult("get_stock_summary", result) })
+    }
+    
+    if (lower.includes("recommend") || lower.includes("suggest")) {
+      const result = await executeTool("get_recommended_restock", {})
+      return NextResponse.json({ response: formatToolResult("get_recommended_restock", result) })
+    }
+    
+    return NextResponse.json({ response: textResponse || "Sure boss! What would you like to know? I can check stock levels, find cheapest suppliers, or help you restock." })
   } catch (error) {
     console.error("Agent API error:", error)
     return NextResponse.json(
