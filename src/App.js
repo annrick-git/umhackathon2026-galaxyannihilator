@@ -62,19 +62,19 @@ const translations = {
 };
 
 const currencyConfigs = {
-  RM: { symbol: 'RM', locale: 'ms-MY', rate: 1 },
-  USD: { symbol: '$', locale: 'en-US', rate: 0.22 },
-  EUR: { symbol: '€', locale: 'de-DE', rate: 0.20 },
-  GBP: { symbol: '£', locale: 'en-GB', rate: 0.17 },
-  INR: { symbol: '₹', locale: 'en-IN', rate: 18.5 },
-  CNY: { symbol: '¥', locale: 'zh-CN', rate: 1.6 },
-  JPY: { symbol: '¥', locale: 'ja-JP', rate: 33 }
+  MYR: { symbol: 'RM', locale: 'ms-MY', rate: 1, name: 'Malaysian Ringgit' },
+  USD: { symbol: '$', locale: 'en-US', rate: 0.22, name: 'US Dollar' },
+  EUR: { symbol: '€', locale: 'de-DE', rate: 0.20, name: 'Euro' },
+  GBP: { symbol: '£', locale: 'en-GB', rate: 0.17, name: 'British Pound' },
+  INR: { symbol: '₹', locale: 'en-IN', rate: 18.5, name: 'Indian Rupee' },
+  RMB: { symbol: '¥', locale: 'zh-CN', rate: 1.6, name: 'Chinese Yuan' },
+  JPY: { symbol: '¥', locale: 'ja-JP', rate: 33, name: 'Japanese Yen' }
 };
 
 function formatCurrency(amount, currency) {
-  const config = currencyConfigs[currency] || currencyConfigs.RM;
+  const config = currencyConfigs[currency] || currencyConfigs.MYR;
   const converted = amount * config.rate;
-  return new Intl.NumberFormat(config.locale, { style: 'currency', currency: config.symbol === 'RM' ? 'MYR' : config.symbol }).format(converted);
+  return new Intl.NumberFormat(config.locale, { style: 'currency', currency: currency }).format(converted);
 }
 
 const personalityStyles = {
@@ -94,7 +94,7 @@ function App() {
   const [aiResponse, setAiResponse] = useState('');
   const [personality, setPersonality] = useState('professional');
   const [language, setLanguage] = useState('en');
-  const [currency, setCurrency] = useState('RM');
+  const [currency, setCurrency] = useState('MYR');
   const t = translations[language] || translations.en;
 
   useEffect(() => {
@@ -409,15 +409,17 @@ function App() {
             <div className="setting-group">
               <label>{t.currency}</label>
               <p className="setting-desc">{t.currencyDesc}</p>
-              <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
-                <option value="RM">RM - Malaysian Ringgit</option>
-                <option value="USD">$ - US Dollar</option>
-                <option value="EUR">€ - Euro</option>
-                <option value="GBP">£ - British Pound</option>
-                <option value="INR">₹ - Indian Rupee</option>
-                <option value="CNY">¥ - Chinese Yuan</option>
-                <option value="JPY">¥ - Japanese Yen</option>
-              </select>
+              <div className="currency-toggle">
+                {Object.entries(currencyConfigs).map(([code, config]) => (
+                  <button
+                    key={code}
+                    className={`currency-btn ${currency === code ? 'active' : ''}`}
+                    onClick={() => setCurrency(code)}
+                  >
+                    {config.symbol} {code}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         )}

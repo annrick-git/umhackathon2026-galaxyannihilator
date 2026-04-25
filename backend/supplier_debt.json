@@ -1,5 +1,5 @@
 {
-  "total_debt_rm": 286.61999999999995,
+  "total_debt_rm": 381.48,
   "debts": [
     {
       "supplier_name": "Dairy Farms Inc.",
@@ -16,6 +16,10 @@
     {
       "supplier_name": "Eco Cups Supply",
       "amount_owed": 0
+    },
+    {
+      "supplier_name": "Serene Tea Imports",
+      "amount_owed": 94.86
     }
   ]
 }

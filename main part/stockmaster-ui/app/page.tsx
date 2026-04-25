@@ -54,6 +54,8 @@ export default function StockMasterDashboard() {
   const [unitSystem, setUnitSystem] = useState<"original" | "metric" | "imperial" | "si">("original")
   const [theme, setTheme] = useState<"dark" | "light">("dark")
   const [fontSize, setFontSize] = useState<"small" | "medium" | "large">("medium")
+  const [currency, setCurrency] = useState<string>("MYR")
+  const [language, setLanguage] = useState<"en" | "ms" | "zh" | "ta">("en")
   const [priceItems, setPriceItems] = useState<string[]>([])
   const [selectedPriceItem, setSelectedPriceItem] = useState<string>("")
   const [priceRange, setPriceRange] = useState<"hour" | "day" | "month">("day")
@@ -98,6 +100,31 @@ export default function StockMasterDashboard() {
     } catch (error) {
       console.error("Failed to fetch inventory:", error)
     }
+  }
+
+  const translations: Record<string, Record<string, string>> = {
+    en: { dashboard: 'Dashboard', inventory: 'Inventory', suppliers: 'Suppliers', settings: 'Settings', prices: 'Prices', lowStockAlerts: 'Low Stock Alerts', allStocked: 'All items stocked!', left: 'left', settingsTitle: 'Settings', theme: 'Theme', fontSize: 'Font Size', currency: 'Currency', language: 'Language' },
+    ms: { dashboard: 'Papan Pemuka', inventory: 'Inventori', suppliers: 'Pembekal', settings: 'Tetapan', prices: 'Harga', lowStockAlerts: 'Amaran Stok Rendah', allStocked: 'Semua item mencukupi!', left: 'baki', settingsTitle: 'Tetapan', theme: 'Tema', fontSize: 'Saiz Fon', currency: 'Mata Wang', language: 'Bahasa' },
+    zh: { dashboard: '仪表板', inventory: '库存', suppliers: '供应商', settings: '设置', prices: '价格', lowStockAlerts: '低库存警报', allStocked: '所有物品库存充足！', left: '剩余', settingsTitle: '设置', theme: '主题', fontSize: '字体大小', currency: '货币', language: '语言' },
+    ta: { dashboard: 'டாஷ்போர்டு', inventory: 'இன்வெண்டரி', suppliers: 'வழங்குநர்கள்', settings: 'அமைப்புகள்', prices: 'விலைகள்', lowStockAlerts: 'குறைந்த இருப்பு எச்சரிக்கைகள்', allStocked: 'அனைத்து பொருட்களும் இருப்பில் உள்ளன!', left: 'மீதம்', settingsTitle: 'அமைப்புகள்', theme: 'தீம்', fontSize: 'எழுத்துரு அளவு', currency: 'நாணயம்', language: 'மொழி' }
+  };
+
+  const t = translations[language] || translations.en;
+
+  const currencyConfigs: Record<string, { symbol: string; locale: string; rate: number }> = {
+    MYR: { symbol: 'RM', locale: 'ms-MY', rate: 1 },
+    USD: { symbol: '$', locale: 'en-US', rate: 0.22 },
+    EUR: { symbol: '€', locale: 'de-DE', rate: 0.20 },
+    GBP: { symbol: '£', locale: 'en-GB', rate: 0.17 },
+    INR: { symbol: '₹', locale: 'en-IN', rate: 18.5 },
+    CNY: { symbol: '¥', locale: 'zh-CN', rate: 1.6 },
+    JPY: { symbol: '¥', locale: 'ja-JP', rate: 33 }
+  };
+
+  function formatCurrency(amount: number, curr: string) {
+    const config = currencyConfigs[curr] || currencyConfigs.MYR;
+    const converted = amount * config.rate;
+    return new Intl.NumberFormat(config.locale, { style: 'currency', currency: curr }).format(converted);
   }
 
   function convertUnit(value: number, unit: string, system: "original" | "metric" | "imperial" | "si"): string {
@@ -487,7 +514,7 @@ export default function StockMasterDashboard() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
-                Dashboard
+                {t.dashboard}
               </button>
             </li>
             <li>
@@ -495,7 +522,7 @@ export default function StockMasterDashboard() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                 </svg>
-                Inventory
+                {t.inventory}
               </button>
             </li>
             <li>
@@ -503,7 +530,7 @@ export default function StockMasterDashboard() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
-                Suppliers
+                {t.suppliers}
               </button>
             </li>
             <li>
@@ -512,7 +539,7 @@ export default function StockMasterDashboard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                Settings
+                {t.settings}
               </button>
             </li>
             <li>
@@ -520,7 +547,7 @@ export default function StockMasterDashboard() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                 </svg>
-                Prices
+                {t.prices}
               </button>
             </li>
           </ul>
@@ -532,17 +559,17 @@ export default function StockMasterDashboard() {
               <svg className="w-4 h-4 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
-              <span className="text-sm font-medium text-foreground">Low Stock Alerts</span>
+              <span className="text-sm font-medium text-foreground">{t.lowStockAlerts}</span>
             </div>
             <ul className="space-y-2">
               {lowStockItems.length === 0 ? (
-                <li className="text-sm text-muted-foreground">All items stocked!</li>
+                <li className="text-sm text-muted-foreground">{t.allStocked}</li>
               ) : (
                 lowStockItems.map((item) => (
                   <li key={item.id} className="flex items-center justify-between text-sm">
                     <span className="text-foreground truncate">{item.name}</span>
                     <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-destructive/10 text-destructive">
-                      {item.currentStock} left
+                      {item.currentStock} {t.left}
                     </span>
                   </li>
                 ))
@@ -687,7 +714,7 @@ export default function StockMasterDashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-destructive">Total Amount Owed to Suppliers</p>
-                      <p className="text-2xl font-bold text-destructive">RM {supplierDebt.total_debt_rm.toFixed(2)}</p>
+                      <p className="text-2xl font-bold text-destructive">{formatCurrency(supplierDebt.total_debt_rm, currency)}</p>
                     </div>
                     <button
                       onClick={() => setShowRepayModal(true)}
@@ -700,7 +727,7 @@ export default function StockMasterDashboard() {
                     {supplierDebt.debts.filter(d => d.amount_owed > 0).map(d => (
                       <div key={d.supplier_name} className="flex justify-between text-sm">
                         <span className="text-foreground">{d.supplier_name}</span>
-                        <span className="text-destructive font-medium">RM {d.amount_owed.toFixed(2)}</span>
+                        <span className="text-destructive font-medium">{formatCurrency(d.amount_owed, currency)}</span>
                       </div>
                     ))}
                   </div>
@@ -726,7 +753,7 @@ export default function StockMasterDashboard() {
                               <p className="text-sm text-muted-foreground">{item.unit}</p>
                             </div>
                             <div className="text-right">
-                              <p className="font-semibold text-foreground">RM {item.priceRM.toFixed(2)}</p>
+                              <p className="font-semibold text-foreground">{formatCurrency(item.priceRM, currency)}</p>
                               {isBestPrice && <span className="text-xs text-green-500">★ Best Price</span>}
                             </div>
                           </div>
@@ -761,7 +788,7 @@ export default function StockMasterDashboard() {
                     >
                       <option value="">Choose an item...</option>
                       {(selectedSupplier ? suppliersData.find(s => s.name === selectedSupplier)?.items || [] : suppliersData.flatMap(s => s.items)).map((item, idx) => (
-                        <option key={`${item.name}-${idx}`} value={item.name}>{item.name} - RM {item.priceRM.toFixed(2)} ({item.unit})</option>
+                        <option key={`${item.name}-${idx}`} value={item.name}>{item.name} - {formatCurrency(item.priceRM, currency)} ({item.unit})</option>
                       ))}
                     </select>
                   </div>
@@ -779,7 +806,7 @@ export default function StockMasterDashboard() {
                     <div className="p-3 bg-muted/50 rounded-lg">
                       <p className="text-sm text-muted-foreground">Estimated Total:</p>
                       <p className="text-2xl font-bold text-foreground">
-                        RM {((suppliersData.flatMap(s => s.items).find(i => i.name === selectedSupplierItem)?.priceRM || 0) * orderQuantity).toFixed(2)}
+                        {formatCurrency(((suppliersData.flatMap(s => s.items).find(i => i.name === selectedSupplierItem)?.priceRM || 0) * orderQuantity), currency)}
                       </p>
                     </div>
                   )}
@@ -804,7 +831,7 @@ export default function StockMasterDashboard() {
                           })
                           const data = await res.json()
                           if (data.success) {
-                            setOrderSuccess(`Order placed! ${orderQuantity}x ${item.name} added to inventory. Amount owed: RM ${(item.priceRM * orderQuantity).toFixed(2)}`)
+                            setOrderSuccess(`Order placed! ${orderQuantity}x ${item.name} added to inventory. Amount owed: ${formatCurrency(item.priceRM * orderQuantity, currency)}`)
                             setSelectedSupplierItem("")
                             setSelectedSupplier("")
                             setOrderQuantity(1)
@@ -832,11 +859,11 @@ export default function StockMasterDashboard() {
             </div>
           ) : activeView === "settings" ? (
             <div className="bg-card rounded-lg border border-border p-6">
-              <h2 className="text-xl font-semibold text-foreground mb-6">Settings</h2>
+              <h2 className="text-xl font-semibold text-foreground mb-6">{t.settingsTitle}</h2>
               
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Theme</label>
+                  <label className="block text-sm font-medium text-foreground mb-2">{t.theme}</label>
                   <div className="flex gap-3">
                     <button
                       onClick={() => setTheme("dark")}
@@ -854,7 +881,7 @@ export default function StockMasterDashboard() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Font Size</label>
+                  <label className="block text-sm font-medium text-foreground mb-2">{t.fontSize}</label>
                   <div className="flex gap-3">
                     <button
                       onClick={() => setFontSize("small")}
@@ -875,6 +902,37 @@ export default function StockMasterDashboard() {
                       Large
                     </button>
                   </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">{t.currency}</label>
+                  <select
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value)}
+                    className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-foreground"
+                  >
+                    <option value="MYR">RM - Malaysian Ringgit</option>
+                    <option value="USD">$ - US Dollar</option>
+                    <option value="EUR">€ - Euro</option>
+                    <option value="GBP">£ - British Pound</option>
+                    <option value="INR">₹ - Indian Rupee</option>
+                    <option value="CNY">¥ - Chinese Yuan</option>
+                    <option value="JPY">¥ - Japanese Yen</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">{t.language}</label>
+                  <select
+                    value={language}
+                    onChange={(e) => setLanguage(e.target.value as "en" | "ms" | "zh" | "ta")}
+                    className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-foreground"
+                  >
+                    <option value="en">English</option>
+                    <option value="ms">Bahasa Melayu (Malay)</option>
+                    <option value="zh">中文 (Mandarin)</option>
+                    <option value="ta">தமிழ் (Tamil)</option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -929,7 +987,7 @@ export default function StockMasterDashboard() {
                     {priceHistory.map((point, idx) => (
                       <div key={idx} className="flex justify-between text-sm py-1 border-b border-border/30">
                         <span className="text-muted-foreground">{new Date(point.timestamp).toLocaleString()}</span>
-                        <span className="text-foreground font-medium">RM {point.price.toFixed(2)}</span>
+                        <span className="text-foreground font-medium">{formatCurrency(point.price, currency)}</span>
                       </div>
                     ))}
                   </div>
@@ -996,7 +1054,7 @@ export default function StockMasterDashboard() {
                   >
                     <option value="">Choose a supplier...</option>
                     {supplierDebt.debts.filter(d => d.amount_owed > 0).map((d, idx) => (
-                      <option key={`${d.supplier_name}-${idx}`} value={d.supplier_name}>{d.supplier_name} - RM {d.amount_owed.toFixed(2)}</option>
+                      <option key={`${d.supplier_name}-${idx}`} value={d.supplier_name}>{d.supplier_name} - {formatCurrency(d.amount_owed, currency)}</option>
                     ))}
                   </select>
                 </div>
@@ -1054,7 +1112,7 @@ export default function StockMasterDashboard() {
                         })
                         const data = await res.json()
                         if (data.success) {
-                          alert(`Repayment successful! Remaining debt: RM ${data.remaining_debt.toFixed(2)}`)
+                          alert(`Repayment successful! Remaining debt: ${formatCurrency(data.remaining_debt, currency)}`)
                           setShowRepayModal(false)
                           setRepaySupplier("")
                           setRepayAmount("")

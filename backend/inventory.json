@@ -4,7 +4,7 @@
       "id": "1",
       "name": "Fresh Whole Milk",
       "category": "Dairy",
-      "currentStock": 0,
+      "currentStock": 15,
       "minStock": 5,
       "unit": "Case"
     },
@@ -44,7 +44,7 @@
       "id": "6",
       "name": "Jasmine Green Tea Leaves",
       "category": "Tea",
-      "currentStock": 4,
+      "currentStock": 5,
       "minStock": 3,
       "unit": "1 kg bag"
     },
