@@ -98,6 +98,14 @@ async function executeTool(toolName: string, args: Record<string, unknown> = {})
         method: "GET"
       })
       return await response.json()
+    } else if (toolName === "restock_item") {
+      // restock_item needs POST with JSON body
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(args)
+      })
+      return await response.json()
     } else {
       const response = await fetch(url, {
         method: "POST",
@@ -308,6 +316,18 @@ Start your response by acknowledging what the user wants, then give the answer.`
     if (lower.includes("recommend") || lower.includes("suggest")) {
       const result = await executeTool("get_recommended_restock", {})
       return NextResponse.json({ response: formatToolResult("get_recommended_restock", result) })
+    }
+    
+    if (lower.includes("restock") || lower.includes("order") || lower.includes("add stock")) {
+      // Try to find item to restock - pick first low stock item
+      const lowStock = await executeTool("get_low_stock_items", {})
+      if (lowStock.data && lowStock.data.length > 0) {
+        const firstItem = lowStock.data[0]
+        const qty = firstItem.minStock - firstItem.currentStock || 5
+        const restockResult = await executeTool("restock_item", { id: firstItem.id, quantity: qty })
+        return NextResponse.json({ response: formatToolResult("restock_item", restockResult) })
+      }
+      return NextResponse.json({ response: "Everything looks good boss! No items need restocking." })
     }
     
     return NextResponse.json({ response: textResponse || "Sure boss! What would you like to know? I can check stock levels, find cheapest suppliers, or help you restock." })
