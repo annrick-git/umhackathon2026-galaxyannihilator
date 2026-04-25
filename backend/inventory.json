@@ -12,7 +12,7 @@
       "id": "2",
       "name": "Tapioca Pearls (Boba)",
       "category": "Boba",
-      "currentStock": 2,
+      "currentStock": 12,
       "minStock": 3,
       "unit": "3kg bag"
     },
@@ -52,7 +52,7 @@
       "id": "7",
       "name": "Assam Black Tea Leaves",
       "category": "Tea",
-      "currentStock": 1,
+      "currentStock": 13,
       "minStock": 3,
       "unit": "1 kg bag"
     },
@@ -76,7 +76,7 @@
       "id": "10",
       "name": "Non-Dairy Creamer",
       "category": "Dairy",
-      "currentStock": 3,
+      "currentStock": 14,
       "minStock": 4,
       "unit": "50 lb sack"
     },
@@ -124,7 +124,7 @@
       "id": "16",
       "name": "Lychee Popping Boba",
       "category": "Toppings",
-      "currentStock": 1,
+      "currentStock": 12,
       "minStock": 2,
       "unit": "3.2 kg tub"
     },
@@ -188,7 +188,7 @@
       "id": "24",
       "name": "Mango Fruit Puree",
       "category": "Toppings",
-      "currentStock": 2,
+      "currentStock": 13,
       "minStock": 3,
       "unit": "2 kg bottle"
     },

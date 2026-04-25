@@ -13,8 +13,12 @@ The agent can:
 import os
 import json
 import requests
+from dotenv import load_dotenv
 from openai import OpenAI
 from typing import Any, Optional
+
+# Load .env file
+load_dotenv()
 
 # ============================================
 # Configuration
@@ -22,9 +26,9 @@ from typing import Any, Optional
 
 # ILMU.ai API Configuration
 # Get your API key from https://console.ilmu.ai/
-ILMU_API_KEY = os.environ.get("ILMU_API_KEY", "YOUR_API_KEY_HERE")
-BASE_URL = "https://api.ilmu.ai/v1"
-MODEL = "ilmu-glm-5.1"  # Or use "nemo-super" if ilmu-glm-5.1 not available
+ILMU_API_KEY = os.environ.get("ZAI_API_KEY", os.environ.get("ILMU_API_KEY", "YOUR_API_KEY_HERE"))
+BASE_URL = os.environ.get("ZAI_BASE_URL", "https://api.ilmu.ai/v1")
+MODEL = os.environ.get("ZAI_MODEL", "ilmu-glm-5.1")
 
 # Tool API Base URL
 TOOLS_API_BASE = "http://localhost:5001/api/tools"
@@ -658,6 +662,11 @@ def run_agent_simple(prompt: str) -> str:
 
 if __name__ == "__main__":
     import sys
+    import io
+    
+    # Fix Unicode encoding issue on Windows
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
     
     print("="*60)
     print("Agentic AI Inventory Manager")
@@ -665,7 +674,7 @@ if __name__ == "__main__":
     
     # Check API key
     if ILMU_API_KEY == "YOUR_API_KEY_HERE":
-        print("\n⚠️  WARNING: Please set your ILMU_API_KEY in agent.py or as an environment variable")
+        print("\n[!] WARNING: Please set your ZAI_API_KEY in .env file or as an environment variable")
         print("   Get your API key from: https://console.ilmu.ai/")
         print("")
     
@@ -673,11 +682,11 @@ if __name__ == "__main__":
     try:
         health = execute_tool("health_check", {})
         if health.get("success"):
-            print("✓ Tools API is running on http://localhost:5001")
+            print("[OK] Tools API is running on http://localhost:5001")
         else:
-            print("⚠️  Tools API may not be running. Start it with: python agent_tools.py")
+            print("[!] Tools API may not be running. Start it with: python agent_tools.py")
     except:
-        print("⚠️  Could not connect to Tools API. Make sure agent_tools.py is running.")
+        print("[!] Could not connect to Tools API. Make sure agent_tools.py is running.")
     
     print("\n" + "="*60)
     

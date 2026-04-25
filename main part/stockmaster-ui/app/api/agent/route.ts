@@ -122,6 +122,18 @@ async function executeTool(toolName: string, args: Record<string, unknown> = {})
 function formatToolResult(toolName: string, result: Record<string, unknown>) {
   if (!result.success && !result.data) return `Sorry, I got an error: ${result.error || "Unknown error"}`
   
+  if (toolName === "get_all_inventory") {
+    const items = (result.data || []) as { id: string; name: string; category: string; currentStock: number; minStock: number; unit: string }[]
+    if (items.length === 0) return "No items in inventory."
+    
+    let response = `📦 **All Inventory (${items.length} items):**\n\n`
+    items.forEach(i => {
+      const status = i.currentStock < i.minStock ? "⚠️ LOW" : "✅"
+      response += `• ${i.name}: ${i.currentStock}/${i.minStock} ${i.unit} ${status}\n`
+    })
+    return response
+  }
+  
   if (toolName === "get_optimal_supplier") {
     const best = result.best_supplier
     const price = result.best_price_rm
@@ -136,7 +148,7 @@ function formatToolResult(toolName: string, result: Record<string, unknown>) {
     response += `   RM${price} (${unit})\n`
     response += `   = RM${normPrice}/${normUnit}\n`
     
-    if (savings && savings > 0) {
+    if (savings && typeof savings === 'number' && savings > 0) {
       response += `\n💰 **You save RM${savings}** by choosing ${best}!`
     }
     
@@ -144,11 +156,11 @@ function formatToolResult(toolName: string, result: Record<string, unknown>) {
   }
   
   if (toolName === "get_low_stock_items") {
-    const items = result.data || []
+    const items = (result.data || []) as { name: string; currentStock: number; minStock: number; unit: string }[]
     if (items.length === 0) return "Great news boss! All items are well stocked! ✨"
     
     let response = `⚠️ **${items.length} items need restocking:**\n\n`
-    items.slice(0, 5).forEach((i: Record<string, unknown>) => {
+    items.slice(0, 5).forEach((i) => {
       const status = i.currentStock === 0 ? "OUT OF STOCK!" : "low"
       response += `• **${i.name}**: ${i.currentStock}/${i.minStock} ${i.unit} (${status})\n`
     })
@@ -159,7 +171,7 @@ function formatToolResult(toolName: string, result: Record<string, unknown>) {
   }
   
   if (toolName === "get_stock_summary") {
-    const d = result.data || {}
+    const d = (result.data as Record<string, unknown>) || {}
     const health = d.stock_health_percentage
     const total = d.total_unique_items
     const low = d.low_stock_items
@@ -175,11 +187,11 @@ function formatToolResult(toolName: string, result: Record<string, unknown>) {
   }
   
   if (toolName === "get_recommended_restock") {
-    const items = result.data || []
+    const items = (result.data || []) as { name: string; recommended_order_quantity: number; unit: string; priority: string; estimated_cost_rm: number }[]
     if (items.length === 0) return "Everything looks good boss! No restocking needed."
     
     let response = `📋 **Recommended Restock:**\n\n`
-    items.slice(0, 5).forEach((i: Record<string, unknown>) => {
+    items.slice(0, 5).forEach((i) => {
       response += `• **${i.name}**: Order ${i.recommended_order_quantity} ${i.unit}\n`
       response += `   Priority: ${i.priority} | Est. RM${i.estimated_cost_rm}\n`
     })
@@ -191,15 +203,15 @@ function formatToolResult(toolName: string, result: Record<string, unknown>) {
   }
   
   if (toolName === "restock_item") {
-    const item = result.data || {}
-    const newStock = result.new_stock
-    const added = result.added_quantity
+    const item = (result.data as { name: string; unit: string }) || {}
+    const newStock = result.new_stock as number
+    const added = result.added_quantity as number
     return `✅ **Done!** Added ${added} to ${item.name}. New stock: ${newStock} ${item.unit}`
   }
   
   if (toolName === "generate_order_draft") {
-    const msg = result.message
-    const total = result.total_rm
+    const msg = result.message as string
+    const total = result.total_rm as number
     return `📱 **WhatsApp Order Message:**\n\n_${msg}_\n\n💰 **Total: RM${total}**\n\nCopy and send to supplier!`
   }
   
@@ -220,33 +232,47 @@ export async function POST(req: NextRequest) {
 
 Your personality: Helpful, casual, like talking to a friend. You use simple language.
 
-IMPORTANT TOOLS:
-- get_all_inventory: Check all items (no args)
-- get_low_stock_items: See what's low/out (no args)
-- get_stock_summary: Overall stats (no args)
-- get_optimal_supplier: Find cheapest supplier (needs item name)
-- restock_item: Add stock (needs id + quantity)
-- get_recommended_restock: AI suggestions (no args)
+CRITICAL: When you need to get or update inventory data, you MUST use the provided tools by responding with a function call in the correct JSON format. Do NOT write tool names as text - actually call the function.
+DO NOT write <tool_call> or </tool_call> tags in your responses - these are for internal use only.
 
-HOW TO TALK:
-1. Use friendly, casual language
-2. Always format nicely with emojis and bold text
-3. Show savings when comparing suppliers
-4. Keep responses short and clear
-5. Use Markdown for bold (**text**) and bullets (•)
+IMPORTANT TOOLS AVAILABLE:
+- get_all_inventory: Check all items (no arguments needed)
+- get_low_stock_items: See what's low/out (no arguments needed)
+- get_stock_summary: Overall stats (no arguments needed)
+- get_optimal_supplier: Find cheapest supplier (needs item name as {"name": "item"})
+- restock_item: Add stock (needs {"id": "item_id", "quantity": number})
+- get_recommended_restock: AI suggestions (no arguments needed)
 
-EXAMPLES:
-- "Sure boss, let me check..." 
-- "Found it! Best price is from [Supplier] at RMxxx"
-- "You can save RMxxx by choosing this supplier!"
-- "Already added more stock for you!"
+RULES:
+1. When the user asks about stock, ALWAYS call the appropriate tool first
+2. Do NOT just describe what tool you would use - actually call it
+3. Format response nicely with emojis after you get the data
+4. Use Markdown for bold (**text**) and bullets (•)
 
-When user asks about inventory:
-1. Use the right tool
-2. Format the result nicely with emojis
-3. Add helpful suggestions
+If user wants to restock, call restock_item tool with the item id and quantity.
+If user wants to see what's low, call get_low_stock_items.
+If user wants recommendations, call get_recommended_restock.
 
-Start your response by acknowledging what the user wants, then give the answer.`
+NEVER write <tool_call>... as text. Use the function calling format.`
+
+    // PRE-PROCESS: Handle restock requests BEFORE calling LLM
+    const lower = message.toLowerCase()
+    if (lower.includes("restock") || lower.includes("order more") || lower.includes("bawak") || lower.includes("bawa")) {
+      const itemMatch = message.match(/(?:restock|order|bawak|bawa)\s+(?:the\s+)?(.+?)(?:\s+(\d+)|$)/i)
+      
+      if (itemMatch && itemMatch[1]) {
+        const itemName = itemMatch[1].trim()
+        const invResult = await executeTool("get_all_inventory", {})
+        const items = (invResult.data || []) as { id: string; name: string; currentStock: number; minStock: number; unit: string }[]
+        const foundItem = items.find(i => i.name.toLowerCase().includes(itemName.toLowerCase()))
+        
+        if (foundItem) {
+          const qtyToAdd = itemMatch[2] ? parseInt(itemMatch[2]) : foundItem.minStock - foundItem.currentStock + 10
+          const restockResult = await executeTool("restock_item", { id: foundItem.id, quantity: qtyToAdd })
+          return NextResponse.json({ response: formatToolResult("restock_item", restockResult) })
+        }
+      }
+    }
 
     const messages = [
       { role: "system" as const, content: systemPrompt },
@@ -269,68 +295,67 @@ Start your response by acknowledging what the user wants, then give the answer.`
 
     if (response?.tool_calls) {
       const toolCall = response.tool_calls[0]
+      if (!('function' in toolCall)) {
+        return NextResponse.json({ response: "Unable to process tool call" })
+      }
       const toolName = toolCall.function.name
       const args = JSON.parse(toolCall.function.arguments)
 
       console.log(`[Tool] ${toolName}:`, args)
 
       const toolResult = await executeTool(toolName, args)
-      const formatted = formatToolResult(toolName, toolResult)
-
-      const followUp = await client.chat.completions.create({
-        model: ZAI_MODEL,
-        messages: [
-          ...messages as never,
-          { role: "assistant" as const, content: null, tool_calls: [toolCall] as never },
-          { role: "tool" as const, tool_call_id: toolCall.id, content: formatted } as never
-        ] as never,
-      })
-
-      return NextResponse.json({ response: followUp.choices[0]?.message?.content || formatted })
+      return NextResponse.json({ response: formatToolResult(toolName, toolResult) })
     }
 
     const textResponse = response?.content || ""
     
-    // FALLBACK: If no tool call, check keywords and call API directly
-    const lower = message.toLowerCase()
+    // Parse tool calls from text format: <tool_call>restock_item({"id": "5", "quantity": 5})</tool_call>
+    const toolCallPatternWithArgs = /<tool_call>(\w+)\(\s*(\{[^}]+\})\s*\)<\/tool_call>/
+    const toolMatchWithArgs = textResponse.match(toolCallPatternWithArgs)
     
-    if (lower.includes("low stock") || lower.includes("need restock") || lower.includes("susu") || lower.includes("tak ada")) {
-      const result = await executeTool("get_low_stock_items", {})
-      return NextResponse.json({ response: formatToolResult("get_low_stock_items", result) })
-    }
+    // Also parse simple pattern: <tool_call>get_recommended_restock</tool_call>
+    const simplePattern = /<tool_call>(\w+)<\/tool_call>/
+    const simpleMatch = textResponse.match(simplePattern)
     
-    if (lower.includes("supplier") || lower.includes("cheapest") || lower.includes("price") || lower.includes("cheap")) {
-      // Try to extract item name
-      const itemMatch = message.match(/(?:for|to|get)\s+([A-Za-z\s]+?)(?:\?|$)/i) || message.match(/([A-Za-z]+(?:\s+[A-Za-z]+)?)/)
-      const itemName = itemMatch ? itemMatch[1].trim() : "Fresh Whole Milk"
-      console.log("Looking for supplier:", itemName)
-      const result = await executeTool("get_optimal_supplier", { name: itemName })
-      return NextResponse.json({ response: formatToolResult("get_optimal_supplier", result) })
-    }
-    
-    if (lower.includes("summary") || lower.includes("stats") || lower.includes("health") || lower.includes("report")) {
-      const result = await executeTool("get_stock_summary", {})
-      return NextResponse.json({ response: formatToolResult("get_stock_summary", result) })
-    }
-    
-    if (lower.includes("recommend") || lower.includes("suggest")) {
-      const result = await executeTool("get_recommended_restock", {})
-      return NextResponse.json({ response: formatToolResult("get_recommended_restock", result) })
-    }
-    
-    if (lower.includes("restock") || lower.includes("order") || lower.includes("add stock")) {
-      // Try to find item to restock - pick first low stock item
-      const lowStock = await executeTool("get_low_stock_items", {})
-      if (lowStock.data && lowStock.data.length > 0) {
-        const firstItem = lowStock.data[0]
-        const qty = firstItem.minStock - firstItem.currentStock || 5
-        const restockResult = await executeTool("restock_item", { id: firstItem.id, quantity: qty })
-        return NextResponse.json({ response: formatToolResult("restock_item", restockResult) })
+    // Handle tool call with arguments first
+    if (toolMatchWithArgs) {
+      const toolName = toolMatchWithArgs[1]
+      const argsStr = toolMatchWithArgs[2]
+      console.log("Detected tool call with args:", toolName, argsStr)
+      
+      try {
+        const args = JSON.parse(argsStr)
+        const toolResult = await executeTool(toolName, args)
+        return NextResponse.json({ response: formatToolResult(toolName, toolResult) })
+      } catch (e) {
+        console.error("Failed to parse tool call:", e)
       }
-      return NextResponse.json({ response: "Everything looks good boss! No items need restocking." })
     }
     
-    return NextResponse.json({ response: textResponse || "Sure boss! What would you like to know? I can check stock levels, find cheapest suppliers, or help you restock." })
+    // Handle simple tool call (no arguments)
+    if (simpleMatch) {
+      const toolName = simpleMatch[1]
+      console.log("Detected simple tool call:", toolName)
+      
+      if (toolName === "get_recommended_restock" || toolName === "get_low_stock_items") {
+        const toolResult = await executeTool("get_recommended_restock", {})
+        return NextResponse.json({ response: formatToolResult("get_recommended_restock", toolResult) })
+      }
+      if (toolName === "get_all_inventory") {
+        const toolResult = await executeTool("get_all_inventory", {})
+        return NextResponse.json({ response: formatToolResult("get_all_inventory", toolResult) })
+      }
+      if (toolName === "get_stock_summary") {
+        const toolResult = await executeTool("get_stock_summary", {})
+        return NextResponse.json({ response: formatToolResult("get_stock_summary", toolResult) })
+      }
+if (toolName === "get_low_stock_items") {
+        const toolResult = await executeTool("get_low_stock_items", {})
+        return NextResponse.json({ response: formatToolResult("get_low_stock_items", toolResult) })
+      }
+    }
+
+    return NextResponse.json({ response: textResponse || "Sure boss! What would you like to know?" })
   } catch (error) {
     console.error("Agent API error:", error)
     return NextResponse.json(

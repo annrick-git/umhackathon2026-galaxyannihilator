@@ -41,6 +41,7 @@ function readInventory(): Inventory {
   } catch {
     return { items: [] }
   }
+}
 
 function writeInventory(inventory: Inventory): void {
   const filePath = getInventoryPath()

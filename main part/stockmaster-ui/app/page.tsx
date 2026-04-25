@@ -71,6 +71,9 @@ export default function StockMasterDashboard() {
       })
       const data = await res.json()
       setMessages(prev => [...prev, { role: "assistant", content: data.response }])
+      
+      // Refresh inventory after agent response (in case tool was used)
+      await fetchInventory()
     } catch (error) {
       console.error("Chat error:", error)
       setMessages(prev => [...prev, { role: "assistant", content: "Sorry Boss, something went wrong. Please try again." }])

@@ -24,7 +24,7 @@ function readSuppliers(): { suppliers: Supplier[] } {
 function normalizePrice(price: number, unitStr: string): number {
   const numbers = unitStr.match(/[\d,]+/g)
   if (!numbers) return price
-  const qty = parseFloat(numbers[numbers.length - 1].replace(/,/g ''))
+  const qty = parseFloat(numbers[numbers.length - 1].replace(/,/g, ''))
   if (isNaN(qty) || qty === 0) return price
   return price / qty
 }
@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
       const supplierOptions = []
       for (const supplier of suppliersData.suppliers) {
         for (const supItem of supplier.items) {
-          if (itemLower.includes(supItem.name.toLowerCase()) {
+          if (itemLower.includes(supItem.name.toLowerCase())) {
             const normPrice = normalizePrice(supItem.priceRM, supItem.unit)
             const baseUnit = getBaseUnit(supItem.unit)
             supplierOptions.push({
