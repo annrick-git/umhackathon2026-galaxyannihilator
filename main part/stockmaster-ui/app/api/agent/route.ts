@@ -83,11 +83,25 @@ const TOOL_SCHEMAS = [
         required: ["items"]
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "delete_stock",
+      description: "Delete/clear all stock for an item (set to 0). Use when user wants to remove or waste stock.",
+      parameters: {
+        type: "object",
+        properties: {
+          id: { type: "string", description: "The item ID to delete stock for" }
+        },
+        required: ["id"]
+      }
+    }
   }
 ]
 
 const READ_TOOLS = ["get_all_inventory", "get_low_stock_items", "get_stock_summary", "get_optimal_supplier", "get_recommended_restock"]
-const WRITE_TOOLS = ["restock_item", "generate_order_draft"]
+const WRITE_TOOLS = ["restock_item", "generate_order_draft", "delete_stock"]
 
 async function executeTool(toolName: string, args: Record<string, unknown> = {}) {
   const url = `${FLASK_API}/${toolName}`
@@ -206,7 +220,27 @@ function formatToolResult(toolName: string, result: Record<string, unknown>) {
     const item = (result.data as { name: string; unit: string }) || {}
     const newStock = result.new_stock as number
     const added = result.added_quantity as number
-    return `✅ **Done!** Added ${added} to ${item.name}. New stock: ${newStock} ${item.unit}`
+    
+    const fs = require("fs")
+    let pricePerUnit = 0
+    try {
+      const suppliersData = JSON.parse(fs.readFileSync("./data/suppliers.json", "utf8"))
+      for (const supplier of suppliersData.suppliers) {
+        const found = supplier.items.find((i: { name: string }) => i.name.toLowerCase() === item.name.toLowerCase())
+        if (found) {
+          pricePerUnit = found.priceRM
+          break
+        }
+      }
+    } catch {}
+    
+    const totalCost = added * pricePerUnit
+    
+    let billing = pricePerUnit > 0 
+      ? `\n\n💵 BILLING\n───────\nUnit: RM${pricePerUnit.toFixed(2)}\nTotal: RM${totalCost.toFixed(2)}`
+      : ""
+    
+    return `✅ Restock: ${item.name}\n+${added} ${item.unit}\nNew: ${newStock}${billing}`
   }
   
   if (toolName === "generate_order_draft") {
@@ -271,6 +305,28 @@ NEVER write <tool_call>... as text. Use the function calling format.`
           const restockResult = await executeTool("restock_item", { id: foundItem.id, quantity: qtyToAdd })
           return NextResponse.json({ response: formatToolResult("restock_item", restockResult) })
         }
+      }
+    }
+
+    // PRE-PROCESS: Handle delete/clear/remove stock requests
+    if (lower.includes("delete") || lower.includes("clear") || lower.includes("remove") || lower.includes("waste")) {
+      const itemMatch = message.match(/(?:delete|clear|remove|waste)\s+(?:the\s+)?(.+?)(?:\s+(\d+)|$)/i)
+      
+      if (itemMatch && itemMatch[1]) {
+        const itemName = itemMatch[1].trim()
+        const invResult = await executeTool("get_all_inventory", {})
+        const items = (invResult.data || []) as { id: string; name: string; currentStock: number; minStock: number; unit: string }[]
+        const foundItem = items.find(i => i.name.toLowerCase().includes(itemName.toLowerCase()))
+        
+        if (foundItem) {
+          const deleteResult = await executeTool("delete_stock", { id: foundItem.id })
+          if (deleteResult.success) {
+            const prevStock = deleteResult.previous_stock as number
+            return NextResponse.json({ response: `🗑️ Cleared ${foundItem.name}\nPrev: ${prevStock} ${foundItem.unit}\nNow: 0` })
+          }
+          return NextResponse.json({ response: `Sorry, couldn't clear stock: ${deleteResult.error}` })
+        }
+        return NextResponse.json({ response: `Couldn't find item: "${itemName}"` })
       }
     }
 

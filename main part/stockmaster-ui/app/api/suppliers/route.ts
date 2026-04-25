@@ -91,5 +91,11 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ error: "Invalid action" }, { status: 400 })
+  try {
+    const suppliersData = readSuppliers()
+    return NextResponse.json(suppliersData)
+  } catch (error) {
+    console.error("Failed to read suppliers:", error)
+    return NextResponse.json({ error: "Failed to read suppliers" }, { status: 500 })
+  }
 }

@@ -38,8 +38,9 @@ export function VoiceInput({ onTranscript, disabled }: VoiceInputProps) {
           }
         }
 
-        recognitionRef.current.onerror = (event: Event) => {
-          console.error("Speech recognition error", event)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        recognitionRef.current.onerror = (event: any) => {
+          console.error("Speech recognition error", event.error)
           setIsRecording(false)
         }
 

@@ -1,0 +1,21 @@
+{
+  "total_debt_rm": 286.61999999999995,
+  "debts": [
+    {
+      "supplier_name": "Dairy Farms Inc.",
+      "amount_owed": 0
+    },
+    {
+      "supplier_name": "Dairy farms inc.",
+      "amount_owed": 73.12
+    },
+    {
+      "supplier_name": "Premium Dairy Co.",
+      "amount_owed": 213.5
+    },
+    {
+      "supplier_name": "Eco Cups Supply",
+      "amount_owed": 0
+    }
+  ]
+}

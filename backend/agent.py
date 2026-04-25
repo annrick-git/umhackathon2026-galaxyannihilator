@@ -13,16 +13,22 @@ The agent can:
 import os
 import json
 import requests
-from dotenv import load_dotenv
 from openai import OpenAI
 from typing import Any, Optional
-
-# Load .env file
-load_dotenv()
 
 # ============================================
 # Configuration
 # ============================================
+
+# Load .env file
+env_file = os.path.join(os.path.dirname(__file__), '.env')
+if os.path.exists(env_file):
+    with open(env_file, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if line and '=' in line and not line.startswith('#'):
+                key, val = line.split('=', 1)
+                os.environ.setdefault(key.strip(), val.strip())
 
 # ILMU.ai API Configuration
 # Get your API key from https://console.ilmu.ai/
@@ -261,13 +267,53 @@ TOOL_SCHEMAS = [
         "type": "function",
         "function": {
             "name": "remove_item",
-            "description": "Delete an item from the inventory database",
+            "description": "Delete/remove an item completely from the inventory database",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "id": {"type": "string", "description": "The unique ID of the inventory item to remove"}
                 },
                 "required": ["id"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "decrease_stock",
+            "description": "Decrease/use stock from an item (e.g., when product is sold or used in drinks)",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "string", "description": "The unique ID of the inventory item"},
+                    "quantity": {"type": "number", "description": "The quantity to decrease from current stock"}
+                },
+                "required": ["id", "quantity"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "bulk_decrease_stock",
+            "description": "Decrease stock for multiple items at once (e.g., after a busy day of sales)",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "decreases": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {"type": "string"},
+                                "quantity": {"type": "number"}
+                            },
+                            "required": ["id", "quantity"]
+                        },
+                        "description": "Array of decreases, each containing id and quantity"
+                    }
+                },
+                "required": ["decreases"]
             }
         }
     },
@@ -422,7 +468,7 @@ def execute_tool(tool_name: str, arguments: dict) -> dict:
     write_json_tools = [
         "update_stock", "restock_item", "restock_all_critical",
         "add_new_item", "search_inventory", "bulk_update_stock",
-        "generate_order_draft"
+        "generate_order_draft", "decrease_stock", "bulk_decrease_stock"
     ]
     
     try:
@@ -461,45 +507,280 @@ def format_tool_result(tool_name: str, result: dict) -> str:
         return f"Error: {result.get('error', 'Unknown error')}"
     
     # Format based on tool type
-    if tool_name == "get_low_stock_items":
+    if tool_name == "get_all_inventory":
         items = result.get("data", [])
         if not items:
-            return "All items are sufficiently stocked!"
-        return f"Low stock items ({len(items)}):\n" + "\n".join([
-            f"- {i['name']}: {i['currentStock']}/{i['minStock']} {i['unit']}" 
-            for i in items[:10]
-        ])
+            return "No inventory items found."
+        lines = ["📦 INVENTORY LIST ({0} items):".format(len(items)), ""]
+        for item in items:
+            status = "⚠️ LOW" if item['currentStock'] < item['minStock'] else "✓ OK"
+            lines.append("{status} {name}: {curr}/{min} {unit}".format(
+                status=status,
+                name=item['name'],
+                curr=item['currentStock'],
+                min=item['minStock'],
+                unit=item.get('unit', '')
+            ))
+        return "\n".join(lines[:30])
+    
+    elif tool_name == "get_item_by_id":
+        item = result.get("data", {})
+        if not item:
+            return "Item not found."
+        status = "⚠️ LOW" if item['currentStock'] < item['minStock'] else "✓ OK"
+        return "📦 {name}\n  Category: {cat}\n  Stock: {curr}/{min} {unit} [{status}]".format(
+            name=item['name'],
+            cat=item.get('category', ''),
+            curr=item['currentStock'],
+            min=item['minStock'],
+            unit=item.get('unit', ''),
+            status=status
+        )
+    
+    elif tool_name == "get_item_by_name":
+        items = result.get("data", [])
+        if not items:
+            return "No items found."
+        lines = ["🔍 Found {0} items:".format(len(items)), ""]
+        for item in items:
+            status = "⚠️ LOW" if item['currentStock'] < item['minStock'] else "✓ OK"
+            lines.append("{status} {name}: {curr}/{min} {unit}".format(
+                status=status,
+                name=item['name'],
+                curr=item['currentStock'],
+                min=item['minStock'],
+                unit=item.get('unit', '')
+            ))
+        return "\n".join(lines)
+    
+    elif tool_name == "get_low_stock_items":
+        items = result.get("data", [])
+        if not items:
+            return "✅ All items are sufficiently stocked!"
+        lines = ["⚠️ LOW STOCK ITEMS ({0}):".format(len(items)), ""]
+        for i, item in enumerate(items, 1):
+            lines.append("{i}. {name}\n   Stock: {curr}/{min} {unit}".format(
+                i=i,
+                name=item['name'],
+                curr=item['currentStock'],
+                min=item['minStock'],
+                unit=item.get('unit', '')
+            ))
+        return "\n".join(lines)
+    
+    elif tool_name == "get_critical_stock_items":
+        items = result.get("data", [])
+        if not items:
+            return "✅ No critical stock items!"
+        lines = ["🚨 CRITICAL - NEED IMMEDIATE RESTOCK ({0}):".format(len(items)), ""]
+        for i, item in enumerate(items, 1):
+            lines.append("{i}. {name} - ONLY {curr} LEFT!".format(
+                i=i,
+                name=item['name'],
+                curr=item['currentStock']
+            ))
+        return "\n".join(lines)
     
     elif tool_name == "get_recommended_restock":
         items = result.get("data", [])
         if not items:
-            return "No restocking needed!"
-        return f"Recommended restock ({len(items)} items, Est. RM{result.get('total_estimated_cost_rm', 0)}):\n" + "\n".join([
-            f"- {i['name']}: order {i['recommended_order_quantity']} {i.get('unit', '')} ({i['priority']})"
-            for i in items[:5]
-        ])
+            return "✅ No restocking needed!"
+        total = result.get('total_estimated_cost_rm', 0)
+        lines = ["📋 RECOMMENDED RESTOCK ({0} items) - Est. RM{1}:".format(len(items), total), ""]
+        for i, item in enumerate(items[:8], 1):
+            priority_emoji = "🔴" if item['priority'] == "CRITICAL" else "🟡" if item['priority'] == "HIGH" else "🟢"
+            lines.append("{i}. {priority} {name}\n   Order: {qty} {unit}".format(
+                i=i,
+                priority=priority_emoji,
+                name=item['name'],
+                qty=item['recommended_order_quantity'],
+                unit=item.get('unit', '')
+            ))
+        return "\n".join(lines)
     
     elif tool_name == "get_stock_summary":
         data = result.get("data", {})
-        return f"Stock Summary:\n- Total items: {data.get('total_unique_items', 0)}\n- Low stock: {data.get('low_stock_items', 0)}\n- Out of stock: {data.get('out_of_stock_items', 0)}\n- Health: {data.get('stock_health_percentage', 0)}%"
+        health = data.get('stock_health_percentage', 0)
+        emoji = "🟢" if health >= 80 else "🟡" if health >= 50 else "🔴"
+        return """📊 STOCK SUMMARY
+━━━━━━━━━━━━━━━━━━━━━
+  Total Items: {total}
+  ✅ Well-stocked: {well}
+  ⚠️ Low Stock: {low}
+  🚨 Out of Stock: {out}
+  Health: {emoji} {health}%
+━━━━━━━━━━━━━━━━━━━━━""".format(
+            total=data.get('total_unique_items', 0),
+            well=data.get('well_stocked_items', 0),
+            low=data.get('low_stock_items', 0),
+            out=data.get('out_of_stock_items', 0),
+            emoji=emoji,
+            health=health
+        )
+    
+    elif tool_name == "get_suppliers":
+        suppliers = result.get("data", [])
+        if not suppliers:
+            return "No suppliers found."
+        lines = ["🏭 SUPPLIERS ({0}):".format(len(suppliers)), ""]
+        for s in suppliers:
+            lines.append("• {name}".format(name=s['name']))
+            if 'contact' in s:
+                lines.append("  Contact: {contact}".format(contact=s.get('contact', '')))
+        return "\n".join(lines)
+    
+    elif tool_name == "get_items_by_supplier":
+        items = result.get("data", [])
+        supplier = result.get("supplier", "")
+        if not items:
+            return "No items from this supplier."
+        lines = ["📦 Items from {0}:".format(supplier), ""]
+        for item in items:
+            lines.append("• {name} - RM{price}".format(
+                name=item['name'],
+                price=item.get('priceRM', 'N/A')
+            ))
+        return "\n".join(lines)
+    
+    elif tool_name == "get_category_summary":
+        data = result.get("data", {})
+        lines = ["📁 INVENTORY BY CATEGORY", ""]
+        for cat, info in sorted(data.items()):
+            lines.append("📂 {cat}: {count} items ({low} low stock)".format(
+                cat=cat,
+                count=info['total_items'],
+                low=info['low_stock_items']
+            ))
+        return "\n".join(lines)
+    
+    elif tool_name == "get_inventory_valuation":
+        total = result.get("total_inventory_value_rm", 0)
+        by_cat = result.get("by_category", {})
+        lines = ["💰 INVENTORY VALUATION: RM{0}".format(total), ""]
+        for cat, value in sorted(by_cat.items()):
+            lines.append("  {cat}: RM{value}".format(cat=cat, value=value))
+        return "\n".join(lines)
     
     elif tool_name == "restock_item":
-        return f"Restocked: {result.get('message', 'Success')}"
+        item = result.get("data", {})
+        return "✅ Restocked: {name}\n   New stock: {curr} {unit}".format(
+            name=item.get('name', ''),
+            curr=item.get('currentStock', 0),
+            unit=item.get('unit', '')
+        )
     
     elif tool_name == "restock_all_critical":
-        return f"Restocked {result.get('items_restocked', 0)} items: {', '.join([r['name'] for r in result.get('data', [])[:5]])}"
+        count = result.get('items_restocked', 0)
+        items = result.get('data', [])[:5]
+        names = ", ".join([r['name'] for r in items])
+        return "✅ Restocked {count} items: {names}".format(count=count, names=names)
     
     elif tool_name == "get_optimal_supplier":
-        return f"Best supplier for {result.get('item_name')}: {result.get('best_supplier')} at RM{result.get('best_price_rm')}\nNormalized: RM{result.get('normalized_price')}/{result.get('normalized_unit')}\n{result.get('message', '')}"
+        item_name = result.get('item_name', '')
+        best = result.get('best_supplier', '')
+        price = result.get('best_price_rm', 0)
+        norm = result.get('normalized_price', 0)
+        unit = result.get('normalized_unit', '')
+        savings = result.get('potential_savings_rm')
+        msg = "🏆 Best supplier for {0}: {1}\n   Price: RM{2}\n   Per {3}: RM{4}".format(
+            item_name, best, price, unit, norm
+        )
+        if savings:
+            msg += "\n   💰 Save RM{0}!".format(savings)
+        return msg
     
     elif tool_name == "generate_order_draft":
-        return f"Order message ready:\n```\n{result.get('message')}\n```\n\nTotal: RM{result.get('total_rm')}"
+        msg = result.get('message', '')
+        total = result.get('total_rm', 0)
+        return "📝 ORDER DRAFT (RM{0}):\n\n{1}".format(total, msg)
     
     elif tool_name == "export_inventory_csv":
-        return f"CSV export ready: {result.get('total_items')} items. Download from API."
+        count = result.get('total_items', 0)
+        return "📊 CSV Export ready: {0} items".format(count)
+    
+    elif tool_name == "export_inventory_report":
+        summary = result.get('data', {}).get('summary', {})
+        return "📋 INVENTORY REPORT:\n  Total: {total}\n  Low: {low}\n  Out: {out}\n  Value: RM{value}".format(
+            total=summary.get('total_unique_items', 0),
+            low=summary.get('low_stock_count', 0),
+            out=summary.get('out_of_stock_count', 0),
+            value=summary.get('total_inventory_value_rm', 0)
+        )
+    
+    elif tool_name == "search_inventory":
+        items = result.get("data", [])
+        filters = result.get("filters_applied", {})
+        if not items:
+            return "No items match your search."
+        lines = ["🔍 Found {0} items:".format(len(items)), ""]
+        for item in items:
+            status = "⚠️ LOW" if item['currentStock'] < item['minStock'] else "✓"
+            lines.append("{status} {name}: {curr}/{min}".format(
+                status=status,
+                name=item['name'],
+                curr=item['currentStock'],
+                min=item['minStock']
+            ))
+        return "\n".join(lines)
+    
+    elif tool_name == "add_new_item":
+        item = result.get("data", {})
+        return "✅ Added: {name} ({cat})\n   Stock: {stock} {unit}".format(
+            name=item.get('name', ''),
+            cat=item.get('category', ''),
+            stock=item.get('currentStock', 0),
+            unit=item.get('unit', '')
+        )
+    
+    elif tool_name == "remove_item":
+        item = result.get("deleted_item", {})
+        return "🗑️ Removed: {name}".format(name=item.get('name', ''))
+    
+    elif tool_name == "decrease_stock":
+        item = result.get("data", {})
+        curr = result.get('new_stock', 0)
+        status = result.get('status', '')
+        status_emoji = "🚨" if curr == 0 else "⚠️" if curr < item.get('minStock', 0) else "✅"
+        return "➖ Decreased: {name}\n   New stock: {curr} {unit} [{emoji}{status}]".format(
+            name=item.get('name', ''),
+            curr=curr,
+            unit=item.get('unit', ''),
+            emoji=status_emoji,
+            status=status
+        )
+    
+    elif tool_name == "bulk_decrease_stock":
+        results_list = result.get('data', [])
+        count = result.get('updated_count', 0)
+        lines = ["➖ Bulk Decreased ({0} items):".format(count), ""]
+        for r in results_list[:5]:
+            lines.append("  • {name}: {prev} → {new}".format(
+                name=r['name'],
+                prev=r['previous_stock'],
+                new=r['new_stock']
+            ))
+        return "\n".join(lines)
+    
+    elif tool_name == "health_check":
+        return "✅ Server healthy! Running on port {0}".format(result.get('port', 5001))
+    
+    elif tool_name == "get_stock_by_category":
+        items = result.get("data", [])
+        if not items:
+            return "No items in this category."
+        lines = ["📂 Category items:", ""]
+        for item in items:
+            status = "⚠️" if item['currentStock'] < item['minStock'] else "✓"
+            lines.append("{status} {name}: {curr}/{min}".format(
+                status=status,
+                name=item['name'],
+                curr=item['currentStock'],
+                min=item['minStock']
+            ))
+        return "\n".join(lines)
     
     else:
-        # Generic formatting
+        # Generic formatting - show key info nicely
         return json.dumps(result, indent=2)[:2000]
 
 

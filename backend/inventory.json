@@ -4,7 +4,7 @@
       "id": "1",
       "name": "Fresh Whole Milk",
       "category": "Dairy",
-      "currentStock": 5,
+      "currentStock": 0,
       "minStock": 5,
       "unit": "Case"
     },
@@ -12,7 +12,7 @@
       "id": "2",
       "name": "Tapioca Pearls (Boba)",
       "category": "Boba",
-      "currentStock": 12,
+      "currentStock": 13,
       "minStock": 3,
       "unit": "3kg bag"
     },
@@ -20,7 +20,7 @@
       "id": "3",
       "name": "16oz PET Plastic Cups",
       "category": "Packaging",
-      "currentStock": 8,
+      "currentStock": 11,
       "minStock": 10,
       "unit": "Case of 1,000"
     },
@@ -28,7 +28,7 @@
       "id": "4",
       "name": "2-Ply Toilet Paper",
       "category": "Janitorial",
-      "currentStock": 12,
+      "currentStock": 10,
       "minStock": 5,
       "unit": "Case of 96 rolls"
     },
@@ -60,7 +60,7 @@
       "id": "8",
       "name": "Brown Sugar Syrup",
       "category": "Sweeteners",
-      "currentStock": 5,
+      "currentStock": 13,
       "minStock": 4,
       "unit": "2.5 kg jug"
     },
@@ -100,7 +100,7 @@
       "id": "13",
       "name": "Individually Wrapped Wide Straws",
       "category": "Packaging",
-      "currentStock": 4,
+      "currentStock": 15,
       "minStock": 5,
       "unit": "Box of 4,000"
     },
@@ -172,7 +172,7 @@
       "id": "22",
       "name": "Evaporated Milk",
       "category": "Dairy",
-      "currentStock": 4,
+      "currentStock": 5,
       "minStock": 3,
       "unit": "Carton (48 x 400g tins)"
     },
@@ -196,7 +196,7 @@
       "id": "25",
       "name": "Thermal Receipt Paper (80x80mm)",
       "category": "Supplies",
-      "currentStock": 5,
+      "currentStock": 8,
       "minStock": 3,
       "unit": "Box of 50 rolls"
     }

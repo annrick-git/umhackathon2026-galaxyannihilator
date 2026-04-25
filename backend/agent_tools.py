@@ -302,8 +302,35 @@ def update_stock():
         "tool": "update_stock",
         "data": item,
         "previous_stock": old_stock,
-        "new_stock": data['currentStock'],
-        "message": f"Updated {item['name']} stock from {old_stock} to {data['currentStock']}"
+        "message": f"Updated stock for {item['name']} to {data['currentStock']}"
+    })
+
+
+@app.route('/api/tools/delete_stock', methods=['POST'])
+def delete_stock():
+    """Delete/clear all stock for an item (set to 0)"""
+    data = request.get_json()
+    
+    if not data or 'id' not in data:
+        return jsonify({"success": False, "error": "Missing required field: 'id'"}), 400
+    
+    inventory = load_inventory()
+    item = find_item_by_id(inventory['items'], data['id'])
+    
+    if not item:
+        return jsonify({"success": False, "error": f"Item with id '{data['id']}' not found"}), 404
+    
+    old_stock = item['currentStock']
+    item['currentStock'] = 0
+    
+    save_inventory(inventory)
+    
+    return jsonify({
+        "success": True,
+        "tool": "delete_stock",
+        "data": item,
+        "previous_stock": old_stock,
+        "message": f"Deleted all stock for {item['name']}. Previous: {old_stock}"
     })
 
 
@@ -996,6 +1023,302 @@ def export_inventory_csv():
         "csv_content": csv_content,
         "download_ready": True
     })
+
+
+# ============================================
+# TOOL 26: Create Supplier Order
+# ============================================
+@app.route('/api/tools/create_supplier_order', methods=['POST'])
+def create_supplier_order():
+    """Create a supplier order and update inventory + debt"""
+    data = request.get_json()
+    
+    if not data or 'item_name' not in data or 'supplier_name' not in data or 'quantity' not in data:
+        return jsonify({"success": False, "error": "Missing required fields: item_name, supplier_name, quantity"}), 400
+    
+    item_name = data['item_name']
+    supplier_name = data['supplier_name']
+    quantity = int(data['quantity'])
+    unit_price = float(data.get('unit_price', 0))
+    
+    # Find item in inventory and update stock
+    inventory = load_inventory()
+    item = None
+    for i in inventory['items']:
+        if i['name'].lower() == item_name.lower():
+            item = i
+            break
+    
+    if item:
+        item['currentStock'] += quantity
+        save_inventory(inventory)
+    
+    # Update supplier debt
+    import os
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    debt_file = os.path.join(base_dir, 'supplier_debt.json')
+    debt_data = {"total_debt_rm": 0, "debts": []}
+    if os.path.exists(debt_file):
+        with open(debt_file, 'r') as f:
+            debt_data = json.load(f)
+    
+    found = False
+    for d in debt_data['debts']:
+        if d['supplier_name'].lower() == supplier_name.lower():
+            d['amount_owed'] += quantity * unit_price
+            found = True
+            break
+    
+    if not found:
+        debt_data['debts'].append({
+            "supplier_name": supplier_name,
+            "amount_owed": quantity * unit_price
+        })
+    
+    debt_data['total_debt_rm'] = sum(d['amount_owed'] for d in debt_data['debts'])
+    
+    with open(debt_file, 'w') as f:
+        json.dump(debt_data, f, indent=2)
+    
+    return jsonify({
+        "success": True,
+        "tool": "create_supplier_order",
+        "item_name": item_name,
+        "supplier_name": supplier_name,
+        "quantity": quantity,
+        "total_rm": quantity * unit_price,
+        "message": f"Order placed: {quantity}x {item_name} from {supplier_name}"
+    })
+
+
+# ============================================
+# TOOL 27: Get Supplier Debt Summary
+# ============================================
+@app.route('/api/tools/get_supplier_debt_summary', methods=['GET'])
+def get_supplier_debt_summary():
+    """Get summary of supplier debts"""
+    import os
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    debt_file = os.path.join(base_dir, 'supplier_debt.json')
+    
+    if os.path.exists(debt_file):
+        with open(debt_file, 'r') as f:
+            debt_data = json.load(f)
+        return jsonify({
+            "success": True,
+            "total_debt_rm": debt_data.get('total_debt_rm', 0),
+            "debts": debt_data.get('debts', [])
+        })
+    
+    return jsonify({
+        "success": True,
+        "total_debt_rm": 0,
+        "debts": []
+    })
+
+
+# ============================================
+# TOOL 28: Repay Supplier Debt
+# ============================================
+@app.route('/api/tools/repay_supplier_debt', methods=['POST'])
+def repay_supplier_debt():
+    """Repay supplier debt"""
+    data = request.get_json()
+    
+    if not data or 'supplier_name' not in data or 'amount' not in data:
+        return jsonify({"success": False, "error": "Missing required fields: supplier_name, amount"}), 400
+    
+    supplier_name = data['supplier_name']
+    amount = float(data['amount'])
+    
+    import os
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    debt_file = os.path.join(base_dir, 'supplier_debt.json')
+    
+    if not os.path.exists(debt_file):
+        return jsonify({"success": False, "error": "No debt found"}), 400
+    
+    with open(debt_file, 'r') as f:
+        debt_data = json.load(f)
+    
+    # Find and update supplier debt
+    for d in debt_data['debts']:
+        if d['supplier_name'].lower() == supplier_name.lower():
+            if amount >= d['amount_owed']:
+                debt_data['total_debt_rm'] -= d['amount_owed']
+                d['amount_owed'] = 0
+            else:
+                d['amount_owed'] -= amount
+                debt_data['total_debt_rm'] -= amount
+            break
+    
+    with open(debt_file, 'w') as f:
+        json.dump(debt_data, f, indent=2)
+    
+    remaining = sum(d['amount_owed'] for d in debt_data['debts'])
+    
+    return jsonify({
+        "success": True,
+        "message": f"Repaid RM {amount} to {supplier_name}",
+        "remaining_debt": remaining
+    })
+
+
+# ============================================
+# TOOL 29: Price History & Generator
+# ============================================
+import random
+from datetime import datetime, timedelta
+
+PRICE_HISTORY_FILE = os.path.join(BASE_DIR, 'price_history.json')
+
+def generate_realistic_price(base_price):
+    """Generate realistic price that fluctuates ±10% from base"""
+    variation = random.uniform(-0.1, 0.1)
+    return round(base_price * (1 + variation), 2)
+
+def init_price_history(time_range=None):
+    """Initialize or update price history for all supplier items"""
+    import json
+    suppliers_file = os.path.join(BASE_DIR, '..', 'main part', 'stockmaster-ui', 'data', 'suppliers.json')
+    if not os.path.exists(suppliers_file):
+        return
+    
+    with open(suppliers_file, 'r') as f:
+        suppliers_data = json.load(f)
+    
+    history_data = {}
+    now = datetime.now()
+    
+    for supplier in suppliers_data.get('suppliers', []):
+        for item in supplier.get('items', []):
+            item_name = item['name']
+            base_price = item['priceRM']
+            
+            if item_name not in history_data:
+                history_data[item_name] = {'base_price': base_price, 'prices': []}
+            
+            new_price = generate_realistic_price(base_price)
+            timestamp = now.isoformat()
+            
+            history_data[item_name]['prices'].append({
+                'timestamp': timestamp,
+                'price': new_price,
+                'supplier': supplier['name']
+            })
+            
+            # Generate more entries for the past hour (every minute)
+            if time_range == 'hour' or time_range is None:
+                for mins_ago in range(1, 61):
+                    past_time = now - timedelta(minutes=mins_ago)
+                    past_price = generate_realistic_price(base_price)
+                    history_data[item_name]['prices'].append({
+                        'timestamp': past_time.isoformat(),
+                        'price': past_price,
+                        'supplier': supplier['name']
+                    })
+            
+            # Generate day range: past 30 days, 1 entry every 12 hours
+            if time_range == 'day' or time_range is None:
+                for hours_ago in range(12, 744, 12):  # every 12 hours for 30 days
+                    past_time = now - timedelta(hours=hours_ago)
+                    past_price = generate_realistic_price(base_price)
+                    history_data[item_name]['prices'].append({
+                        'timestamp': past_time.isoformat(),
+                        'price': past_price,
+                        'supplier': supplier['name']
+                    })
+            
+            # Generate month range: past year, 1 entry every 15 days
+            if time_range == 'month' or time_range is None:
+                for days_ago in range(15, 366, 15):  # every 15 days for ~1 year
+                    past_time = now - timedelta(days=days_ago)
+                    past_price = generate_realistic_price(base_price)
+                    history_data[item_name]['prices'].append({
+                        'timestamp': past_time.isoformat(),
+                        'price': past_price,
+                        'supplier': supplier['name']
+                    })
+            
+            history_data[item_name]['prices'] = history_data[item_name]['prices'][-1000:]
+    
+    with open(PRICE_HISTORY_FILE, 'w') as f:
+        json.dump(history_data, f, indent=2)
+    
+    return history_data
+
+@app.route('/api/tools/update_prices', methods=['POST'])
+def update_prices():
+    """Update all prices with small random fluctuation"""
+    history_data = init_price_history()
+    return jsonify({"success": True, "message": "Prices updated", "items": len(history_data)})
+
+
+@app.route('/api/tools/get_price_history', methods=['GET'])
+def get_price_history():
+    """Get price history for a specific item"""
+    item_name = request.args.get('item_name', '')
+    time_range = request.args.get('range', 'day')
+    
+    if not os.path.exists(PRICE_HISTORY_FILE):
+        init_price_history()
+    
+    with open(PRICE_HISTORY_FILE, 'r') as f:
+        history_data = json.load(f)
+    
+    if item_name and item_name in history_data:
+        prices = history_data[item_name]['prices']
+    else:
+        return jsonify({"success": False, "error": "Item not found"}), 404
+    
+    now = datetime.now()
+    if time_range == 'hour':
+        cutoff = now - timedelta(minutes=60)
+    elif time_range == 'month':
+        cutoff = now - timedelta(days=365)
+    else:  # day
+        cutoff = now - timedelta(days=30)
+    
+    filtered = [p for p in prices if datetime.fromisoformat(p['timestamp']) > cutoff]
+    
+    return jsonify({
+        "success": True,
+        "item_name": item_name,
+        "range": time_range,
+        "prices": filtered
+    })
+
+
+@app.route('/api/tools/get_all_price_history', methods=['GET'])
+def get_all_price_history():
+    """Get all items price history summary"""
+    if not os.path.exists(PRICE_HISTORY_FILE):
+        init_price_history()
+    
+    with open(PRICE_HISTORY_FILE, 'r') as f:
+        history_data = json.load(f)
+    
+    items = list(history_data.keys())
+    return jsonify({"success": True, "items": items})
+
+
+@app.route('/api/tools/start_price_tracking', methods=['POST'])
+def start_price_tracking():
+    """Start automatic price tracking (generates new prices every minute)"""
+    import threading
+    import time
+    
+    def track_prices():
+        while True:
+            time.sleep(60)
+            init_price_history()
+    
+    thread = threading.Thread(target=track_prices, daemon=True)
+    thread.start()
+    
+    return jsonify({"success": True, "message": "Price tracking started"})
+
+
 @app.errorhandler(404)
 def not_found(e):
     return jsonify({"success": False, "error": "Endpoint not found"}), 404
@@ -1004,6 +1327,23 @@ def not_found(e):
 @app.errorhandler(500)
 def server_error(e):
     return jsonify({"success": False, "error": "Internal server error"}), 500
+
+
+import threading
+import time
+
+def start_price_tracker():
+    """Background price tracker"""
+    while True:
+        time.sleep(60)
+        try:
+            init_price_history()
+        except:
+            pass
+
+# Start price tracking in background
+tracker_thread = threading.Thread(target=start_price_tracker, daemon=True)
+tracker_thread.start()
 
 
 if __name__ == '__main__':
